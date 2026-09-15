@@ -2,6 +2,15 @@
 
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 
+## 1.1.0 — 2026-09-15
+
+- Adiciona gerador de senhas personalizável com comprimento, grupos de caracteres, mínimos de números e símbolos e exclusão de caracteres ambíguos.
+- Adiciona pastas cifradas para criar, renomear, excluir, filtrar e organizar credenciais.
+- Preserva as credenciais em “Sem pasta” quando uma pasta é excluída.
+- Migra automaticamente cofres 1.0 existentes sem alterar ou apagar os dados do usuário.
+- Inclui pastas cifradas nos backups e snapshots de sincronização, mantendo compatibilidade com backups anteriores.
+- Passa a publicar um instalador por usuário (`ScanFace-Setup.exe`) junto do executável portátil.
+
 ## 1.0.2 — 2026-09-15
 
 - Corrige o encerramento ao abrir a tela do cofre depois da autenticação.

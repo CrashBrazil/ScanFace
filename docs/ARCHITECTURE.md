@@ -16,8 +16,8 @@ flowchart TB
 
 | Projeto | Responsabilidade | Dependências internas |
 |---|---|---|
-| `ScanFace.Domain` | Credenciais, envelopes cifrados, metadados e modelos de sincronização | nenhuma |
-| `ScanFace.Application` | Criação, desbloqueio, CRUD, backup, troca de senha, sessão e sincronização | Domain |
+| `ScanFace.Domain` | Credenciais, pastas, envelopes cifrados, metadados e modelos de sincronização | nenhuma |
+| `ScanFace.Application` | Criação, desbloqueio, CRUD de credenciais e pastas, backup, troca de senha, sessão e sincronização | Domain |
 | `ScanFace.Infrastructure` | Implementações de criptografia e integrações externas | Application, Domain |
 | `ScanFace.App` | Views WPF, ViewModels, comandos e composição | todas as camadas do cliente |
 | `ScanFace.SyncApi` | API autenticada e SQLite de blobs opacos | Domain |
@@ -35,7 +35,7 @@ Na criação do cofre:
 5. Se o usuário ativar o Windows Hello, pede consentimento e cria um segundo envelope com DPAPI no escopo `CurrentUser`.
 6. Limpa buffers temporários de chaves com `CryptographicOperations.ZeroMemory`.
 
-Cada credencial é serializada como JSON e cifrada integralmente com AES-256-GCM. O identificador do registro faz parte dos dados autenticados adicionais (AAD), impedindo mover um ciphertext válido para outro identificador.
+Cada credencial e cada pasta são serializadas como JSON e cifradas integralmente com AES-256-GCM. O identificador e o tipo do registro fazem parte dos dados autenticados adicionais (AAD), impedindo mover um ciphertext válido para outro identificador ou tipo. A associação entre credencial e pasta fica dentro do JSON cifrado da credencial.
 
 No desbloqueio por senha, o cliente deriva novamente a chave e abre o primeiro envelope. No desbloqueio pelo Hello, o Windows confirma o usuário e o aplicativo abre o envelope DPAPI local. Assim, o rosto autoriza a mesma chave aleatória; o rosto nunca é transformado em chave criptográfica.
 
@@ -44,15 +44,15 @@ No desbloqueio por senha, o cliente deriva novamente a chave e abre o primeiro e
 O arquivo `%LOCALAPPDATA%\ScanFace\vault.db` contém:
 
 - um documento de metadados com salt, parâmetros Argon2id e envelopes;
-- identificador, nonce, ciphertext, tag e data de atualização de cada item.
+- identificador, nonce, ciphertext, tag e data de atualização de cada credencial e pasta.
 
-Nome, usuário, senha, site, notas e favorito ficam dentro do ciphertext. O SQLite usa journal WAL e sincronização `FULL`.
+Nome, usuário, senha, site, notas, favorito, nome da pasta e associação com a pasta ficam dentro dos ciphertexts. O SQLite usa journal WAL e sincronização `FULL`. Ao abrir um cofre criado na série 1.0, a tabela de pastas é adicionada de forma incremental; as credenciais existentes permanecem associadas a “Sem pasta”.
 
 O arquivo `%LOCALAPPDATA%\ScanFace\sync.settings` é protegido por DPAPI e guarda URL, token e marcador de versão da sincronização.
 
 ## Backup e sincronização
 
-O backup `.scanface` contém o envelope protegido pela senha mestra e os registros cifrados. O envelope DPAPI/Hello é removido, pois não funciona em outro perfil ou computador. Por isso, restaurar em uma nova máquina exige a senha mestra do backup; depois da restauração, o usuário pode cadastrar o Hello do novo dispositivo.
+O backup `.scanface` contém o envelope protegido pela senha mestra, as credenciais cifradas e as pastas cifradas. Backups da série 1.0, que não possuem a coleção de pastas, continuam aceitos. O envelope DPAPI/Hello é removido, pois não funciona em outro perfil ou computador. Por isso, restaurar em uma nova máquina exige a senha mestra do backup; depois da restauração, o usuário pode cadastrar o Hello do novo dispositivo.
 
 A sincronização envia a representação Base64 desse mesmo snapshot. O servidor controla versões de forma otimista: uma atualização só substitui a anterior quando `If-Match` corresponde à versão lida. Se cliente e servidor mudaram desde a última sincronização, o aplicativo sinaliza conflito e não sobrescreve nenhum lado.
 
