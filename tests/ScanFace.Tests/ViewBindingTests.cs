@@ -5,6 +5,8 @@ using System.Windows.Documents;
 using ScanFace.App.Presentation;
 using ScanFace.App.ViewModels;
 using ScanFace.App.Views;
+using ScanFace.Application;
+using ScanFace.Domain;
 
 namespace ScanFace.Tests;
 
@@ -43,6 +45,21 @@ public sealed class ViewBindingTests
                     entryCountRun.GetBindingExpression(Run.TextProperty));
 
                 Assert.Equal(BindingMode.OneWay, entryCountBinding.ParentBinding.Mode);
+
+                var folder = new VaultFolder { Name = "Trabalho" };
+                var editorViewModel = new EntryEditorViewModel(
+                    null,
+                    new PasswordGeneratorService(),
+                    [folder],
+                    folder.Id);
+                editorViewModel.GeneratorLength = 32;
+                editorViewModel.GeneratePasswordCommand.Execute(null);
+                var folderEditorViewModel = new FolderEditorViewModel(folder) { Name = "Pessoal" };
+                folderEditorViewModel.SaveCommand.Execute(null);
+
+                Assert.Equal(folder.Id, editorViewModel.SelectedFolder?.Id);
+                Assert.Equal(32, editorViewModel.Password.Length);
+                Assert.Equal("Pessoal", folderEditorViewModel.Result?.Name);
             }
             catch (Exception exception)
             {
