@@ -63,6 +63,9 @@ public sealed class VaultApplicationServiceTests : IDisposable
         await service.InitializeAsync(MasterPassword, false);
         var folder = new VaultFolder { Name = "Clientes ultrassecretos" };
         await service.SaveFolderAsync(folder);
+        var duplicateError = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SaveFolderAsync(new VaultFolder { Name = folder.Name.ToUpperInvariant() }));
+        Assert.Equal("Já existe uma pasta com esse nome.", duplicateError.Message);
         var entry = new VaultEntry
         {
             Name = "Portal reservado",

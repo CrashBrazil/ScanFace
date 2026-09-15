@@ -241,7 +241,7 @@ public sealed class VaultApplicationService
         if (entry.FolderId is Guid folderId &&
             !(await GetFoldersAsync(cancellationToken)).Any(folder => folder.Id == folderId))
         {
-            throw new ArgumentException("A pasta selecionada não existe mais.", nameof(entry));
+            throw new InvalidOperationException("A pasta selecionada não existe mais.");
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -302,7 +302,7 @@ public sealed class VaultApplicationService
         var normalizedName = folder.Name.Trim();
         if (string.IsNullOrWhiteSpace(normalizedName) || normalizedName.Length > 80)
         {
-            throw new ArgumentException("O nome da pasta deve ter entre 1 e 80 caracteres.", nameof(folder));
+            throw new ArgumentException("O nome da pasta deve ter entre 1 e 80 caracteres.");
         }
 
         var existingFolders = await GetFoldersAsync(cancellationToken);
@@ -310,7 +310,7 @@ public sealed class VaultApplicationService
                 item.Id != folder.Id &&
                 string.Equals(item.Name, normalizedName, StringComparison.CurrentCultureIgnoreCase)))
         {
-            throw new ArgumentException("Já existe uma pasta com esse nome.", nameof(folder));
+            throw new InvalidOperationException("Já existe uma pasta com esse nome.");
         }
 
         if (folder.Id == Guid.Empty)

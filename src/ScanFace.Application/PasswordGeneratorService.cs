@@ -23,22 +23,22 @@ public sealed class PasswordGeneratorService
         ArgumentNullException.ThrowIfNull(options);
         if (options.Length is < 5 or > 128)
         {
-            throw new ArgumentOutOfRangeException(nameof(options), "O tamanho deve ficar entre 5 e 128 caracteres.");
+            throw new ArgumentException("O tamanho deve ficar entre 5 e 128 caracteres.");
         }
 
         if (options.MinimumNumbers is < 0 or > 128 || options.MinimumSymbols is < 0 or > 128)
         {
-            throw new ArgumentOutOfRangeException(nameof(options), "Os mínimos devem ficar entre 0 e 128.");
+            throw new ArgumentException("Os mínimos devem ficar entre 0 e 128.");
         }
 
         if (!options.IncludeNumbers && options.MinimumNumbers > 0)
         {
-            throw new ArgumentException("Ative números ou defina o mínimo de números como zero.", nameof(options));
+            throw new ArgumentException("Ative números ou defina o mínimo de números como zero.");
         }
 
         if (!options.IncludeSymbols && options.MinimumSymbols > 0)
         {
-            throw new ArgumentException("Ative caracteres especiais ou defina o mínimo como zero.", nameof(options));
+            throw new ArgumentException("Ative caracteres especiais ou defina o mínimo como zero.");
         }
 
         var groups = new List<(string Characters, int Minimum)>();
@@ -49,13 +49,13 @@ public sealed class PasswordGeneratorService
 
         if (groups.Count == 0)
         {
-            throw new ArgumentException("Selecione pelo menos um grupo de caracteres.", nameof(options));
+            throw new ArgumentException("Selecione pelo menos um grupo de caracteres.");
         }
 
         var requiredCharacters = groups.Sum(group => group.Minimum);
         if (requiredCharacters > options.Length)
         {
-            throw new ArgumentException("O comprimento é menor que a soma dos mínimos selecionados.", nameof(options));
+            throw new ArgumentException("O comprimento é menor que a soma dos mínimos selecionados.");
         }
 
         var result = new char[options.Length];

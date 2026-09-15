@@ -73,6 +73,7 @@ public sealed class PasswordGeneratorTests
             MinimumSymbols = 0
         };
 
-        Assert.Throws<ArgumentException>(() => new PasswordGeneratorService().Generate(options));
+        var exception = Assert.Throws<ArgumentException>(() => new PasswordGeneratorService().Generate(options));
+        Assert.Equal("Selecione pelo menos um grupo de caracteres.", exception.Message);
     }
 }
