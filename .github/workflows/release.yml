@@ -19,6 +19,15 @@ jobs:
       - run: dotnet test ScanFace.slnx --configuration Release --no-restore
       - name: Publish
         run: dotnet publish src/ScanFace.App/ScanFace.App.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore --output artifacts/ScanFace-win-x64
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (!(Test-Path -LiteralPath $iscc)) {
+            choco install innosetup --no-progress -y
+          }
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          & $iscc "/DMyAppVersion=$version" installer/ScanFace.iss
       - name: Package and checksum
         shell: pwsh
         run: |
@@ -26,10 +35,12 @@ jobs:
           Compress-Archive -Path artifacts/ScanFace-win-x64/* -DestinationPath artifacts/ScanFace-win-x64.zip
           (Get-FileHash artifacts/ScanFace.exe -Algorithm SHA256).Hash + '  ScanFace.exe' | Set-Content artifacts/SHA256SUMS.txt
           (Get-FileHash artifacts/ScanFace-win-x64.zip -Algorithm SHA256).Hash + '  ScanFace-win-x64.zip' | Add-Content artifacts/SHA256SUMS.txt
+          (Get-FileHash artifacts/ScanFace-Setup.exe -Algorithm SHA256).Hash + '  ScanFace-Setup.exe' | Add-Content artifacts/SHA256SUMS.txt
       - uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           files: |
             artifacts/ScanFace.exe
+            artifacts/ScanFace-Setup.exe
             artifacts/ScanFace-win-x64.zip
             artifacts/SHA256SUMS.txt
