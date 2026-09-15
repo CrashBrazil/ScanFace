@@ -1,16 +1,17 @@
 using System.Runtime.ExceptionServices;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Documents;
 using ScanFace.App.Presentation;
 using ScanFace.App.ViewModels;
 using ScanFace.App.Views;
 
 namespace ScanFace.Tests;
 
-public sealed class PasswordBoxHelperTests
+public sealed class ViewBindingTests
 {
     [Fact]
-    public void SetupPasswordBoxes_UpdateViewModelAsUserTypes()
+    public void Views_UseSafeBindingsForPasswordInputAndReadOnlyState()
     {
         Exception? failure = null;
         var thread = new Thread(() =>
@@ -35,6 +36,13 @@ public sealed class PasswordBoxHelperTests
                 Assert.Equal(confirmation.Password, viewModel.ConfirmPassword);
                 Assert.Same(masterBinding, masterPassword.GetBindingExpression(PasswordBoxHelper.BoundPasswordProperty));
                 Assert.Same(confirmationBinding, confirmation.GetBindingExpression(PasswordBoxHelper.BoundPasswordProperty));
+
+                var vaultView = new VaultView();
+                var entryCountRun = Assert.IsType<Run>(vaultView.FindName("EntryCountRun"));
+                var entryCountBinding = Assert.IsType<BindingExpression>(
+                    entryCountRun.GetBindingExpression(Run.TextProperty));
+
+                Assert.Equal(BindingMode.OneWay, entryCountBinding.ParentBinding.Mode);
             }
             catch (Exception exception)
             {

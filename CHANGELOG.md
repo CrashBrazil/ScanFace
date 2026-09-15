@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 
+## 1.0.2 — 2026-09-15
+
+- Corrige o encerramento ao abrir a tela do cofre depois da autenticação.
+- Define como somente leitura o binding do contador de credenciais.
+- Registra erros inesperados de interface em `%LOCALAPPDATA%\ScanFace\error.log` antes de encerrar.
+- Amplia o teste de regressão para validar os bindings das telas de configuração e do cofre.
+
 ## 1.0.1 — 2026-09-15
 
 - Corrige a captura de senhas digitadas nos controles protegidos do WPF.

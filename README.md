@@ -56,6 +56,8 @@ dotnet run --project src/ScanFace.App/ScanFace.App.csproj
 
 Os dados ficam em `%LOCALAPPDATA%\ScanFace`. Nenhuma informação é gravada no diretório do executável.
 
+Se ocorrer um erro inesperado de interface, o aplicativo exibe uma mensagem antes de encerrar e grava os detalhes técnicos em `%LOCALAPPDATA%\ScanFace\error.log`.
+
 ## Gerar o EXE
 
 ```powershell

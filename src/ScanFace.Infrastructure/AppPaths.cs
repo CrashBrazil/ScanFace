@@ -12,6 +12,7 @@ public sealed class AppPaths
     public string RootDirectory { get; }
     public string VaultDatabasePath => Path.Combine(RootDirectory, "vault.db");
     public string SyncSettingsPath => Path.Combine(RootDirectory, "sync.settings");
+    public string ErrorLogPath => Path.Combine(RootDirectory, "error.log");
 
     public void EnsureCreated() => Directory.CreateDirectory(RootDirectory);
 }

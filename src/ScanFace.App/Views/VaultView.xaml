@@ -22,7 +22,7 @@
                         </StackPanel>
                     </Border>
                     <TextBlock Margin="5,12,0,0" Foreground="#8FA7C3">
-                        <Run Text="{Binding EntryCount}" /><Run Text=" itens protegidos" />
+                        <Run x:Name="EntryCountRun" Text="{Binding EntryCount, Mode=OneWay}" /><Run Text=" itens protegidos" />
                     </TextBlock>
                 </StackPanel>
 
