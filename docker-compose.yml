@@ -1,0 +1,15 @@
+services:
+  scanface-sync:
+    build:
+      context: .
+      dockerfile: src/ScanFace.SyncApi/Dockerfile
+    environment:
+      SCANFACE_SYNC_TOKEN: ${SCANFACE_SYNC_TOKEN:-change-this-token}
+    ports:
+      - "8080:8080"
+    volumes:
+      - scanface-data:/data
+    restart: unless-stopped
+
+volumes:
+  scanface-data:
