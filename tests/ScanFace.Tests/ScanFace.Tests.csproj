@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -21,10 +22,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="System.IO" />
     <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ScanFace.App\ScanFace.App.csproj" />
     <ProjectReference Include="..\..\src\ScanFace.Domain\ScanFace.Domain.csproj" />
     <ProjectReference Include="..\..\src\ScanFace.Application\ScanFace.Application.csproj" />
     <ProjectReference Include="..\..\src\ScanFace.Infrastructure\ScanFace.Infrastructure.csproj" />

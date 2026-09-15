@@ -47,6 +47,12 @@ public sealed class SetupViewModel : ObservableObject
     private async Task CreateAsync()
     {
         StatusMessage = string.Empty;
+        if (string.IsNullOrWhiteSpace(MasterPassword) || MasterPassword.Length < 12)
+        {
+            StatusMessage = "A senha mestra deve ter pelo menos 12 caracteres.";
+            return;
+        }
+
         if (MasterPassword != ConfirmPassword)
         {
             StatusMessage = "As senhas não coincidem.";

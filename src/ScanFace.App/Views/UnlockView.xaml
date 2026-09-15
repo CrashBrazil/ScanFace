@@ -29,7 +29,8 @@
                 </Grid>
 
                 <TextBlock Text="Senha mestra" FontWeight="SemiBold" Margin="0,0,0,6" />
-                <PasswordBox presentation:PasswordBoxHelper.BoundPassword="{Binding MasterPassword, UpdateSourceTrigger=PropertyChanged}" />
+                <PasswordBox presentation:PasswordBoxHelper.BoundPassword="{Binding MasterPassword}"
+                             PasswordChanged="MasterPasswordChanged" />
                 <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" Margin="0,10" />
                 <Button Content="Desbloquear com senha" Command="{Binding UnlockWithPasswordCommand}" Style="{StaticResource SecondaryButton}" />
             </StackPanel>

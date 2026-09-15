@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 
+## 1.0.1 — 2026-09-15
+
+- Corrige a captura de senhas digitadas nos controles protegidos do WPF.
+- Impede que o binding seja removido ao editar senha mestra, confirmação, token da API ou senha de credencial.
+- Exibe uma mensagem direta quando a senha mestra realmente tiver menos de 12 caracteres.
+- Adiciona um teste de regressão para o fluxo de criação do cofre.
+
 ## 1.0.0 — 2026-09-15
 
 - Primeiro cofre local com AES-256-GCM e Argon2id.
