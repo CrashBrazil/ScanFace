@@ -15,8 +15,17 @@ public sealed class EntryEditorViewModel : ObservableObject
     private string _website = string.Empty;
     private string _notes = string.Empty;
     private string _errorMessage = string.Empty;
+    private string _generatorErrorMessage = string.Empty;
     private bool _isFavorite;
     private bool _revealPassword;
+    private int _generatorLength = 20;
+    private bool _includeUppercase = true;
+    private bool _includeLowercase = true;
+    private bool _includeNumbers = true;
+    private bool _includeSymbols = true;
+    private int _minimumNumbers = 1;
+    private int _minimumSymbols = 1;
+    private bool _avoidAmbiguousCharacters = true;
 
     public EntryEditorViewModel(VaultEntry? entry, PasswordGeneratorService generator)
     {
@@ -33,7 +42,7 @@ public sealed class EntryEditorViewModel : ObservableObject
 
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(() => RequestClose?.Invoke(false));
-        GeneratePasswordCommand = new RelayCommand(() => Password = _generator.Generate(20, true));
+        GeneratePasswordCommand = new RelayCommand(GeneratePassword);
     }
 
     public event Action<bool>? RequestClose;
@@ -47,9 +56,42 @@ public sealed class EntryEditorViewModel : ObservableObject
     public bool IsFavorite { get => _isFavorite; set => SetProperty(ref _isFavorite, value); }
     public bool RevealPassword { get => _revealPassword; set => SetProperty(ref _revealPassword, value); }
     public string ErrorMessage { get => _errorMessage; set => SetProperty(ref _errorMessage, value); }
+    public string GeneratorErrorMessage { get => _generatorErrorMessage; set => SetProperty(ref _generatorErrorMessage, value); }
+    public int GeneratorLength { get => _generatorLength; set => SetProperty(ref _generatorLength, value); }
+    public bool IncludeUppercase { get => _includeUppercase; set => SetProperty(ref _includeUppercase, value); }
+    public bool IncludeLowercase { get => _includeLowercase; set => SetProperty(ref _includeLowercase, value); }
+    public bool IncludeNumbers { get => _includeNumbers; set => SetProperty(ref _includeNumbers, value); }
+    public bool IncludeSymbols { get => _includeSymbols; set => SetProperty(ref _includeSymbols, value); }
+    public int MinimumNumbers { get => _minimumNumbers; set => SetProperty(ref _minimumNumbers, value); }
+    public int MinimumSymbols { get => _minimumSymbols; set => SetProperty(ref _minimumSymbols, value); }
+    public bool AvoidAmbiguousCharacters { get => _avoidAmbiguousCharacters; set => SetProperty(ref _avoidAmbiguousCharacters, value); }
+    public IReadOnlyList<int> MinimumOptions { get; } = Enumerable.Range(0, 11).ToArray();
     public RelayCommand SaveCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand GeneratePasswordCommand { get; }
+
+    private void GeneratePassword()
+    {
+        try
+        {
+            Password = _generator.Generate(new PasswordGeneratorOptions
+            {
+                Length = GeneratorLength,
+                IncludeUppercase = IncludeUppercase,
+                IncludeLowercase = IncludeLowercase,
+                IncludeNumbers = IncludeNumbers,
+                IncludeSymbols = IncludeSymbols,
+                MinimumNumbers = MinimumNumbers,
+                MinimumSymbols = MinimumSymbols,
+                AvoidAmbiguousCharacters = AvoidAmbiguousCharacters
+            });
+            GeneratorErrorMessage = string.Empty;
+        }
+        catch (ArgumentException exception)
+        {
+            GeneratorErrorMessage = exception.Message;
+        }
+    }
 
     private void Save()
     {
