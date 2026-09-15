@@ -86,10 +86,16 @@ public sealed class VaultApplicationServiceTests : IDisposable
         Assert.DoesNotContain(folder.Name, backupText);
         Assert.DoesNotContain(entry.Name, backupText);
 
-        await service.DeleteFolderAsync(folder.Id);
+        service.Lock();
+        var importedService = CreateService(new AppPaths(Path.Combine(_temporaryDirectory, "restored")));
+        await importedService.ImportBackupAsync(backupPath, MasterPassword, false);
+        Assert.Equal(folder.Name, Assert.Single(await importedService.GetFoldersAsync()).Name);
+        Assert.Equal(folder.Id, Assert.Single(await importedService.GetEntriesAsync()).FolderId);
 
-        Assert.Empty(await service.GetFoldersAsync());
-        Assert.Null(Assert.Single(await service.GetEntriesAsync()).FolderId);
+        await importedService.DeleteFolderAsync(folder.Id);
+
+        Assert.Empty(await importedService.GetFoldersAsync());
+        Assert.Null(Assert.Single(await importedService.GetEntriesAsync()).FolderId);
     }
 
     [Fact]
