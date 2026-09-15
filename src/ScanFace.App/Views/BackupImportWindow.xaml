@@ -12,7 +12,8 @@
             <TextBlock Text="A senha mestra do backup é necessária uma vez para validar e abrir a chave do cofre."
                        Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,6,0,20" />
             <TextBlock Text="Senha mestra do backup" FontWeight="SemiBold" Margin="0,0,0,5" />
-            <PasswordBox presentation:PasswordBoxHelper.BoundPassword="{Binding Password, UpdateSourceTrigger=PropertyChanged}" />
+            <PasswordBox presentation:PasswordBoxHelper.BoundPassword="{Binding Password}"
+                         PasswordChanged="PasswordChanged" />
             <CheckBox Content="Ativar Windows Hello neste computador" IsChecked="{Binding EnableWindowsHello}" Margin="0,16,0,0" />
             <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerBrush}" Margin="0,12,0,0" TextWrapping="Wrap" />
         </StackPanel>

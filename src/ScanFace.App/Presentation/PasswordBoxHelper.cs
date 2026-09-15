@@ -11,11 +11,6 @@ public static class PasswordBoxHelper
         typeof(PasswordBoxHelper),
         new FrameworkPropertyMetadata(string.Empty, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnBoundPasswordChanged));
 
-    private static readonly DependencyProperty UpdatingProperty = DependencyProperty.RegisterAttached(
-        "Updating",
-        typeof(bool),
-        typeof(PasswordBoxHelper));
-
     public static string GetBoundPassword(DependencyObject obj) => (string)obj.GetValue(BoundPasswordProperty);
     public static void SetBoundPassword(DependencyObject obj, string value) => obj.SetValue(BoundPasswordProperty, value);
 
@@ -26,19 +21,10 @@ public static class PasswordBoxHelper
             return;
         }
 
-        passwordBox.PasswordChanged -= HandlePasswordChanged;
-        if (!(bool)passwordBox.GetValue(UpdatingProperty))
+        var password = args.NewValue as string ?? string.Empty;
+        if (passwordBox.Password != password)
         {
-            passwordBox.Password = args.NewValue as string ?? string.Empty;
+            passwordBox.Password = password;
         }
-        passwordBox.PasswordChanged += HandlePasswordChanged;
-    }
-
-    private static void HandlePasswordChanged(object sender, RoutedEventArgs args)
-    {
-        var passwordBox = (PasswordBox)sender;
-        passwordBox.SetValue(UpdatingProperty, true);
-        SetBoundPassword(passwordBox, passwordBox.Password);
-        passwordBox.SetValue(UpdatingProperty, false);
     }
 }

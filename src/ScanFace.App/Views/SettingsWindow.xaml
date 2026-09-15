@@ -32,7 +32,8 @@
                         <TextBlock Text="URL da API" FontWeight="SemiBold" Margin="0,0,0,5" />
                         <TextBox Text="{Binding ServerUrl, UpdateSourceTrigger=PropertyChanged}" />
                         <TextBlock Text="Token da API" FontWeight="SemiBold" Margin="0,12,0,5" />
-                        <PasswordBox presentation:PasswordBoxHelper.BoundPassword="{Binding ApiToken, UpdateSourceTrigger=PropertyChanged}" />
+                        <PasswordBox presentation:PasswordBoxHelper.BoundPassword="{Binding ApiToken}"
+                                     PasswordChanged="ApiTokenChanged" />
                     </StackPanel>
                 </Border>
 
@@ -42,9 +43,11 @@
                         <TextBlock Text="Como o cofre já está desbloqueado, você pode definir uma nova senha mesmo tendo entrado com o rosto."
                                    Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,4,0,12" />
                         <TextBlock Text="Nova senha (mínimo de 12 caracteres)" FontWeight="SemiBold" Margin="0,0,0,5" />
-                        <PasswordBox presentation:PasswordBoxHelper.BoundPassword="{Binding NewMasterPassword, UpdateSourceTrigger=PropertyChanged}" />
+                        <PasswordBox presentation:PasswordBoxHelper.BoundPassword="{Binding NewMasterPassword}"
+                                     PasswordChanged="NewMasterPasswordChanged" />
                         <TextBlock Text="Confirmar nova senha" FontWeight="SemiBold" Margin="0,12,0,5" />
-                        <PasswordBox presentation:PasswordBoxHelper.BoundPassword="{Binding ConfirmMasterPassword, UpdateSourceTrigger=PropertyChanged}" />
+                        <PasswordBox presentation:PasswordBoxHelper.BoundPassword="{Binding ConfirmMasterPassword}"
+                                     PasswordChanged="ConfirmMasterPasswordChanged" />
                         <Button Content="Alterar senha mestra" Command="{Binding ChangeMasterPasswordCommand}" Style="{StaticResource SecondaryButton}" Margin="0,12,0,0" />
                     </StackPanel>
                 </Border>

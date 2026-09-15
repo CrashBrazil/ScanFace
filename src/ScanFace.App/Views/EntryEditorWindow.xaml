@@ -24,7 +24,8 @@
                 <TextBlock Text="Senha" FontWeight="SemiBold" Margin="0,14,0,5" />
                 <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                    <PasswordBox presentation:PasswordBoxHelper.BoundPassword="{Binding Password, UpdateSourceTrigger=PropertyChanged}">
+                    <PasswordBox presentation:PasswordBoxHelper.BoundPassword="{Binding Password}"
+                                 PasswordChanged="PasswordChanged">
                         <PasswordBox.Style>
                             <Style TargetType="PasswordBox" BasedOn="{StaticResource {x:Type PasswordBox}}">
                                 <Style.Triggers><DataTrigger Binding="{Binding RevealPassword}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
