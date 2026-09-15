@@ -11,7 +11,7 @@
     <ApplicationIcon>Assets\scanface.ico</ApplicationIcon>
     <AssemblyName>ScanFace</AssemblyName>
     <RootNamespace>ScanFace.App</RootNamespace>
-    <Version>1.0.2</Version>
+    <Version>1.1.0</Version>
     <Authors>GiorgioRafael</Authors>
     <Product>ScanFace</Product>
     <Description>Cofre de senhas zero knowledge com desbloqueio pelo Windows Hello.</Description>

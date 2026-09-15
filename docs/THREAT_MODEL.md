@@ -2,7 +2,7 @@
 
 ## Ativos protegidos
 
-- senhas, usuários, sites e notas do cofre;
+- senhas, usuários, sites, notas, pastas e associações entre itens do cofre;
 - chave aleatória do cofre;
 - senha mestra;
 - token da API de sincronização;
@@ -15,7 +15,7 @@
 | Cópia do `vault.db` com o aplicativo fechado | conteúdo cifrado com AES-256-GCM; chave protegida por Argon2id e salt aleatório |
 | Força bruta offline da senha mestra | Argon2id com 64 MiB, 3 iterações e paralelismo 4; requisito mínimo de 12 caracteres |
 | Alteração de ciphertext, nonce ou tag | autenticação do AES-GCM rejeita o registro adulterado |
-| Troca de ciphertext entre registros | identificador do item incluído como AAD |
+| Troca de ciphertext entre registros ou tipos | identificador e tipo do item incluídos como AAD |
 | Vazamento ou invasão da API | servidor recebe somente envelope e registros cifrados |
 | Sobrescrita concorrente na API | controle de versão e `If-Match`; conflito preserva os dois lados |
 | Cópia do backup | mesmo material cifrado do cofre; envelope Hello local é excluído |
