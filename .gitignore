@@ -1,0 +1,14 @@
+[Bb]in/
+[Oo]bj/
+.vs/
+.vscode/
+TestResults/
+artifacts/
+publish/
+*.user
+*.suo
+*.db
+*.db-shm
+*.db-wal
+*.scanface
+appsettings.Local.json

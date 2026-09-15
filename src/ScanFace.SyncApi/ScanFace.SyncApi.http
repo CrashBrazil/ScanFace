@@ -1,0 +1,20 @@
+@host = http://localhost:8080
+@token = change-this-token
+@vaultId = 11111111-1111-1111-1111-111111111111
+
+GET {{host}}/health
+
+###
+
+GET {{host}}/api/v1/vaults/{{vaultId}}
+X-ScanFace-Token: {{token}}
+
+###
+
+PUT {{host}}/api/v1/vaults/{{vaultId}}
+X-ScanFace-Token: {{token}}
+Content-Type: application/json
+
+{
+  "payload": "Y2lwaGVydGV4dC1vbmx5"
+}

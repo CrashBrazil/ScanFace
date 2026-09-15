@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ScanFace.App/ScanFace.App.csproj" />
+    <Project Path="src/ScanFace.Application/ScanFace.Application.csproj" />
+    <Project Path="src/ScanFace.Domain/ScanFace.Domain.csproj" />
+    <Project Path="src/ScanFace.Infrastructure/ScanFace.Infrastructure.csproj" />
+    <Project Path="src/ScanFace.SyncApi/ScanFace.SyncApi.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ScanFace.Tests/ScanFace.Tests.csproj" />
+  </Folder>
+</Solution>

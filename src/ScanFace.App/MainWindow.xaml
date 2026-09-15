@@ -1,0 +1,10 @@
+<Window x:Class="ScanFace.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ScanFace — Gerenciamento de Senhas"
+        Width="1180" Height="760" MinWidth="960" MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Assets/scanface-logo.png"
+        PreviewKeyDown="OnUserActivity" PreviewMouseDown="OnUserActivity">
+    <ContentControl Content="{Binding CurrentViewModel}" />
+</Window>

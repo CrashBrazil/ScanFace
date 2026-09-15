@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore ScanFace.slnx
+      - name: Build
+        run: dotnet build ScanFace.slnx --configuration Release --no-restore
+      - name: Test
+        run: dotnet test ScanFace.slnx --configuration Release --no-build --logger "trx;LogFileName=tests.trx"
+      - name: Publish Windows executable
+        run: dotnet publish src/ScanFace.App/ScanFace.App.csproj --configuration Release --runtime win-x64 --self-contained true --no-build --output artifacts/ScanFace-win-x64
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ScanFace-win-x64
+          path: artifacts/ScanFace-win-x64/
+          if-no-files-found: error
