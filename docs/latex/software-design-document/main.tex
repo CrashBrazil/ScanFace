@@ -1,0 +1,179 @@
+\documentclass{article}
+\usepackage{rotating}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{fontspec}
+\usepackage{tocloft}
+\usepackage{titletoc}
+\usepackage{enumitem}
+
+\setmainfont{LEMONMILK-Bold.otf}[Path=Assets/Fonts/]
+
+\begin{document}
+
+%%%%%%%%%% CAPA %%%%%%%%%%
+\begin{titlepage}
+\begin{tikzpicture}[remember picture,overlay]
+    \fill[color=black] (current page.north west) rectangle ++(5cm,-\paperheight);
+    \node[anchor=south west, text=white] at (current page.south west) {\hspace{1.5cm}\begin{turn}{90}
+    \resizebox{!}{35.5pt}{\hspace{1.0cm}DOCUMENTAÇÃO DO SOFTWARE}\end{turn}};
+\end{tikzpicture}
+
+\begin{flushright}
+\vspace{7.5cm}
+
+\Huge SCANFACE
+
+\vspace{0.5cm}
+
+\Large Autenticação e Reconhecimento Facial
+
+\vspace{8cm}
+
+\normalsize Setembro 15, 2026
+
+\end{flushright}
+\end{titlepage}
+
+\newpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%% SUMÁRIO %%%%%%%%%%
+\renewcommand{\contentsname}{Sumário}
+\tableofcontents
+\newpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%% CONTEÚDO %%%%%%%%%%
+\setmainfont{LEMONMILK-Bold.otf}[Path=Assets/Fonts/]
+\section{Descrição}
+\setmainfont{LEMONMILK-Regular.otf}[Path=Assets/Fonts/]
+
+O ScanFace é um sistema avançado de reconhecimento e verificação facial projetado para oferecer autenticação rápida, fluida e extremamente segura em fluxos de controle de acesso. Desenvolvida com base em algoritmos de Inteligência Artificial e Visão Computacional, a solução executa a detecção de faces, o alinhamento de feições, a extração de vetores biométricos e a validação de identidade em tempo real.
+
+A plataforma foi arquitetada para operar de forma contínua e escalável, garantindo alto nível de precisão na mitigação de acessos não autorizados e na prevenção de fraudes por falsificação (como ataques de foto ou vídeo). Graças à sua capacidade de integração versátil com APIs e bancos de dados, o ScanFace simplifica o gerenciamento de credenciais biométricas, combinando alta performance de processamento com confiabilidade operacional para ambientes corporativos, acadêmicos e residenciais.
+\newpage
+
+\setmainfont{LEMONMILK-Bold.otf}[Path=Assets/Fonts/]
+\section{Plano de Desenvolvimento}
+\setmainfont{LEMONMILK-Regular.otf}[Path=Assets/Fonts/]
+
+O plano de desenvolvimento do ScanFace é dividido em etapas estratégicas para assegurar a entrega progressiva e segura da plataforma:
+
+\vspace{0.4cm}
+
+\textbf{Fase 1: Planejamento e Arquitetura} \\
+Definição dos requisitos do sistema, modelagem da arquitetura de software, estruturação do banco de dados e desenho das rotinas de integração via API.
+
+\vspace{0.3cm}
+
+\textbf{Fase 2: Desenvolvimento do Core Biométrico} \\
+Implementação dos módulos de visão computacional para captura de vídeo, detecção de faces, alinhamento facial e extração das características biométricas com bibliotecas especializadas.
+
+\vspace{0.3cm}
+
+\textbf{Fase 3: Otimização e Segurança} \\
+Ajuste fino dos modelos para garantia de alta acurácia, redução do tempo de resposta na verificação em tempo real e integração de mecanismos anti-spoofing (detecção de vivacidade).
+
+\vspace{0.3cm}
+
+\textbf{Fase 4: Testes e Implantação} \\
+Execução de testes funcionais, auditoria de segurança de dados e disponibilização da aplicação para ambiente de produção e integração final.
+\newpage
+
+\setmainfont{LEMONMILK-Bold.otf}[Path=Assets/Fonts/]
+\section{Público-Alvo}
+\setmainfont{LEMONMILK-Regular.otf}[Path=Assets/Fonts/]
+
+\textbf{Administradores de TI e Segurança:} Profissionais responsáveis pelo gerenciamento de identidades, permissões de acesso e integração do sistema com a infraestrutura existente.
+
+\vspace{0.5cm}
+
+\textbf{Usuários Finais:} Colaboradores, clientes ou visitantes que utilizam a validação facial para autenticação rápida e sem atrito em pontos de acesso.
+
+\vspace{0.5cm}
+
+\textbf{Desenvolvedores e Integradores:} Equipes técnicas que utilizam as APIs do ScanFace para conectar a autenticação biométrica a outros softwares e plataformas.
+\newpage
+
+\setmainfont{LEMONMILK-Bold.otf}[Path=Assets/Fonts/]
+\section{Funcionalidades}
+\setmainfont{LEMONMILK-Regular.otf}[Path=Assets/Fonts/]
+
+\subsection{Detecção e Processamento Facial em Tempo Real}
+Captura contínua do fluxo de vídeo via câmera com identificação instantânea de rostos no campo de visão, aplicando rotinas de pré-processamento e alinhamento para garantir alta fidelidade na leitura.
+
+\vspace{0.3cm}
+
+\subsection{Autenticação Biométrica e Comparação de Embeddings}
+Conversão da face detectada em um vetor numérico único (embedding biométrico) e comparação com a base de dados cadastrados para autorização ou negação imediata do acesso.
+
+\vspace{0.3cm}
+
+\subsection{Gestão de Usuários e Registro de Acessos (Logs)}
+Módulo para cadastro de novos usuários com suas respectivas assinaturas biométricas e auditoria completa de acessos com data, hora e status das validações efetuadas.
+\newpage
+
+\setmainfont{LEMONMILK-Bold.otf}[Path=Assets/Fonts/]
+\section{Tecnologias}
+\setmainfont{LEMONMILK-Regular.otf}[Path=Assets/Fonts/]
+
+O ScanFace adota uma pilha tecnológica moderna e altamente segura, priorizando alta performance nativa no Windows, separação clara de responsabilidades e proteção robusta de dados biométricos e credenciais.
+
+\vspace{0.4cm}
+
+\textbf{Linguagens, Plataforma e Interface}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Linguagem C\#:} Linguagem segura, moderna e com ótima integração ao ecossistema Windows.
+    \item \textbf{Plataforma .NET 10:} Fornece alto desempenho e recursos atualizados para desenvolvimento desktop e web.
+    \item \textbf{Interface Gráfica (WPF e XAML):} Utilizados para criar uma aplicação desktop nativa e intuitiva para Windows.
+    \item \textbf{Arquitetura (MVVM e Clean Architecture):} Separam a interface gráfica, as regras de negócio e a infraestrutura, facilitando a manutenção e a escrita de testes.
+\end{itemize}
+
+\vspace{0.3cm}
+
+\textbf{Banco de Dados, API e Comunicação}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Banco de Dados (SQLite):} Banco local leve, rápido e que não exige a configuração de um servidor separado.
+    \item \textbf{API (ASP.NET Core):} Utilizada para disponibilizar a sincronização opcional de forma simples e eficiente.
+    \item \textbf{Comunicação (HTTP e JSON):} Utilizados para transferir os dados cifrados entre o aplicativo desktop e a API.
+\end{itemize}
+
+\vspace{0.3cm}
+
+\textbf{Criptografia e Autenticação}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Criptografia (AES-256-GCM):} Protege as credenciais e dados biométricos com garantia de confidencialidade e verificação de integridade.
+    \item \textbf{Derivação de Chave (Argon2id):} Transforma a senha mestra em uma chave altamente resistente a ataques de força bruta.
+    \item \textbf{Autenticação Local (Windows Hello e DPAPI):} Permite o desbloqueio seguro utilizando reconhecimento facial, impressão digital ou PIN nativo do sistema.
+\end{itemize}
+
+\vspace{0.3cm}
+
+\textbf{Testes, Containers e CI/CD}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Testes (xUnit e Coverlet):} Utilizados para a execução de testes automatizados e análise contínua de cobertura de código.
+    \item \textbf{Containerização (Docker):} Facilitador para a execução, testes e implantação isolada da API de sincronização.
+    \item \textbf{Integração Contínua (GitHub Actions):} Automatiza os processos de compilação, execução de testes e geração das versões finais do aplicativo.
+\end{itemize}
+\newpage
+
+\setmainfont{LEMONMILK-Bold.otf}[Path=Assets/Fonts/]
+\section{Plano de Distribuição (opcional)}
+\setmainfont{LEMONMILK-Regular.otf}[Path=Assets/Fonts/]
+
+O modelo de distribuição do ScanFace é estruturado em duas vertentes principais:
+
+\vspace{0.4cm}
+
+\textbf{Disponibilização via Repositório Open-Source} \\
+O código-fonte principal é disponibilizado publicamente no GitHub para a comunidade técnica, permitindo auditoria, contribuições operacionais e implantação local (*on-premises*).
+
+\vspace{0.3cm}
+
+\textbf{Pacotes e Conteinerização} \\
+Disponibilização de imagens Docker prontas para implantação rápida em servidores localizados ou infraestruturas em nuvem, simplificando a configuração de dependências de visão computacional.
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}
