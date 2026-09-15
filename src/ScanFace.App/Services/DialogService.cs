@@ -11,10 +11,26 @@ public sealed class DialogService : IAppDialogService
 {
     public Window? Owner { get; set; }
 
-    public VaultEntry? EditEntry(VaultEntry? entry, PasswordGeneratorService generator)
+    public VaultEntry? EditEntry(
+        VaultEntry? entry,
+        PasswordGeneratorService generator,
+        IReadOnlyList<VaultFolder> folders,
+        Guid? defaultFolderId = null)
     {
-        var viewModel = new EntryEditorViewModel(entry, generator);
+        var viewModel = new EntryEditorViewModel(entry, generator, folders, defaultFolderId);
         var window = new EntryEditorWindow
+        {
+            Owner = Owner,
+            DataContext = viewModel
+        };
+        viewModel.RequestClose += result => window.DialogResult = result;
+        return window.ShowDialog() == true ? viewModel.Result : null;
+    }
+
+    public VaultFolder? EditFolder(VaultFolder? folder)
+    {
+        var viewModel = new FolderEditorViewModel(folder);
+        var window = new FolderEditorWindow
         {
             Owner = Owner,
             DataContext = viewModel

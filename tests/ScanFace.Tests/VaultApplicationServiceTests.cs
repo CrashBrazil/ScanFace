@@ -55,6 +55,65 @@ public sealed class VaultApplicationServiceTests : IDisposable
         Assert.True(await service.UnlockWithMasterPasswordAsync(MasterPassword));
     }
 
+    [Fact]
+    public async Task Vault_EncryptsFolders_IncludesThemInBackups_AndPreservesEntriesWhenDeleting()
+    {
+        var paths = new AppPaths(_temporaryDirectory);
+        var service = CreateService(paths);
+        await service.InitializeAsync(MasterPassword, false);
+        var folder = new VaultFolder { Name = "Clientes ultrassecretos" };
+        await service.SaveFolderAsync(folder);
+        var entry = new VaultEntry
+        {
+            Name = "Portal reservado",
+            Username = "contato@example.test",
+            Password = "SenhaReservada!2026",
+            FolderId = folder.Id
+        };
+        await service.SaveEntryAsync(entry);
+
+        var restoredFolder = Assert.Single(await service.GetFoldersAsync());
+        var restoredEntry = Assert.Single(await service.GetEntriesAsync());
+        Assert.Equal(folder.Name, restoredFolder.Name);
+        Assert.Equal(folder.Id, restoredEntry.FolderId);
+
+        var databaseText = Encoding.UTF8.GetString(await File.ReadAllBytesAsync(paths.VaultDatabasePath));
+        Assert.DoesNotContain(folder.Name, databaseText);
+
+        var backupPath = Path.Combine(_temporaryDirectory, "folders.scanface");
+        await service.ExportBackupAsync(backupPath);
+        var backupText = await File.ReadAllTextAsync(backupPath);
+        Assert.DoesNotContain(folder.Name, backupText);
+        Assert.DoesNotContain(entry.Name, backupText);
+
+        await service.DeleteFolderAsync(folder.Id);
+
+        Assert.Empty(await service.GetFoldersAsync());
+        Assert.Null(Assert.Single(await service.GetEntriesAsync()).FolderId);
+    }
+
+    [Fact]
+    public async Task Vault_AddsFolderStorageWhenOpeningAnExistingDatabase()
+    {
+        var paths = new AppPaths(_temporaryDirectory);
+        var service = CreateService(paths);
+        await service.InitializeAsync(MasterPassword, false);
+
+        await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(
+                         $"Data Source={paths.VaultDatabasePath};Pooling=False"))
+        {
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "DROP TABLE folders";
+            await command.ExecuteNonQueryAsync();
+        }
+
+        Assert.Empty(await service.GetFoldersAsync());
+        var folder = new VaultFolder { Name = "Pasta migrada" };
+        await service.SaveFolderAsync(folder);
+        Assert.Equal(folder.Name, Assert.Single(await service.GetFoldersAsync()).Name);
+    }
+
     private VaultApplicationService CreateService(AppPaths paths)
     {
         var repository = new SqliteVaultRepository(paths);

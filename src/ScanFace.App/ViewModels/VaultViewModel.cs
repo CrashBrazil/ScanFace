@@ -14,7 +14,9 @@ public sealed class VaultViewModel : ObservableObject
     private readonly IAppDialogService _dialogs;
     private readonly Func<Task> _onLocked;
     private readonly List<VaultEntry> _allEntries = [];
+    private readonly List<VaultFolder> _allFolders = [];
     private VaultEntry? _selectedEntry;
+    private FolderFilterOption? _selectedFolderFilter;
     private string _searchText = string.Empty;
     private string _statusMessage = "Cofre desbloqueado";
     private bool _isBusy;
@@ -36,6 +38,9 @@ public sealed class VaultViewModel : ObservableObject
         AddCommand = new AsyncRelayCommand(AddAsync, () => !IsBusy);
         EditCommand = new AsyncRelayCommand(EditAsync, () => SelectedEntry is not null && !IsBusy);
         DeleteCommand = new AsyncRelayCommand(DeleteAsync, () => SelectedEntry is not null && !IsBusy);
+        AddFolderCommand = new AsyncRelayCommand(AddFolderAsync, () => !IsBusy);
+        RenameFolderCommand = new AsyncRelayCommand(RenameFolderAsync, CanManageSelectedFolder);
+        DeleteFolderCommand = new AsyncRelayCommand(DeleteFolderAsync, CanManageSelectedFolder);
         CopyUsernameCommand = new AsyncRelayCommand(() => CopyAsync(SelectedEntry?.Username, "Usuário"), () => SelectedEntry is not null);
         CopyPasswordCommand = new AsyncRelayCommand(() => CopyAsync(SelectedEntry?.Password, "Senha"), () => SelectedEntry is not null);
         BackupCommand = new AsyncRelayCommand(BackupAsync, () => !IsBusy);
@@ -45,8 +50,10 @@ public sealed class VaultViewModel : ObservableObject
     }
 
     public ObservableCollection<VaultEntry> Entries { get; } = [];
+    public ObservableCollection<FolderFilterOption> FolderFilters { get; } = [];
     public DateTimeOffset LastActivityUtc { get; private set; }
     public int EntryCount => Entries.Count;
+    public int TotalEntryCount => _allEntries.Count;
     public bool IsEmpty => Entries.Count == 0;
 
     public VaultEntry? SelectedEntry
@@ -60,8 +67,36 @@ public sealed class VaultViewModel : ObservableObject
                 DeleteCommand.NotifyCanExecuteChanged();
                 CopyUsernameCommand.NotifyCanExecuteChanged();
                 CopyPasswordCommand.NotifyCanExecuteChanged();
+                OnPropertyChanged(nameof(SelectedEntryFolderName));
                 Touch();
             }
+        }
+    }
+
+    public FolderFilterOption? SelectedFolderFilter
+    {
+        get => _selectedFolderFilter;
+        set
+        {
+            if (SetProperty(ref _selectedFolderFilter, value))
+            {
+                RenameFolderCommand.NotifyCanExecuteChanged();
+                DeleteFolderCommand.NotifyCanExecuteChanged();
+                ApplyFilter();
+                Touch();
+            }
+        }
+    }
+
+    public string SelectedEntryFolderName
+    {
+        get
+        {
+            if (SelectedEntry?.FolderId is not Guid folderId)
+            {
+                return "Sem pasta";
+            }
+            return _allFolders.FirstOrDefault(folder => folder.Id == folderId)?.Name ?? "Sem pasta";
         }
     }
 
@@ -89,6 +124,9 @@ public sealed class VaultViewModel : ObservableObject
                 AddCommand.NotifyCanExecuteChanged();
                 EditCommand.NotifyCanExecuteChanged();
                 DeleteCommand.NotifyCanExecuteChanged();
+                AddFolderCommand.NotifyCanExecuteChanged();
+                RenameFolderCommand.NotifyCanExecuteChanged();
+                DeleteFolderCommand.NotifyCanExecuteChanged();
                 BackupCommand.NotifyCanExecuteChanged();
                 SyncCommand.NotifyCanExecuteChanged();
                 SettingsCommand.NotifyCanExecuteChanged();
@@ -99,6 +137,9 @@ public sealed class VaultViewModel : ObservableObject
     public AsyncRelayCommand AddCommand { get; }
     public AsyncRelayCommand EditCommand { get; }
     public AsyncRelayCommand DeleteCommand { get; }
+    public AsyncRelayCommand AddFolderCommand { get; }
+    public AsyncRelayCommand RenameFolderCommand { get; }
+    public AsyncRelayCommand DeleteFolderCommand { get; }
     public AsyncRelayCommand CopyUsernameCommand { get; }
     public AsyncRelayCommand CopyPasswordCommand { get; }
     public AsyncRelayCommand BackupCommand { get; }
@@ -116,22 +157,68 @@ public sealed class VaultViewModel : ObservableObject
 
     private async Task RefreshAsync()
     {
+        _allFolders.Clear();
+        _allFolders.AddRange(await _vault.GetFoldersAsync());
         _allEntries.Clear();
         _allEntries.AddRange(await _vault.GetEntriesAsync());
+        RebuildFolderFilters();
         ApplyFilter();
+        OnPropertyChanged(nameof(TotalEntryCount));
+        OnPropertyChanged(nameof(SelectedEntryFolderName));
         Touch();
+    }
+
+    private void RebuildFolderFilters()
+    {
+        var previousKind = SelectedFolderFilter?.Kind ?? FolderFilterKind.All;
+        var previousFolderId = SelectedFolderFilter?.FolderId;
+
+        FolderFilters.Clear();
+        FolderFilters.Add(new FolderFilterOption(FolderFilterKind.All, null, "Todas", _allEntries.Count));
+        FolderFilters.Add(new FolderFilterOption(
+            FolderFilterKind.Unfiled,
+            null,
+            "Sem pasta",
+            _allEntries.Count(entry => entry.FolderId is null)));
+        foreach (var folder in _allFolders.OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase))
+        {
+            FolderFilters.Add(new FolderFilterOption(
+                FolderFilterKind.Folder,
+                folder.Id,
+                folder.Name,
+                _allEntries.Count(entry => entry.FolderId == folder.Id)));
+        }
+
+        var replacement = FolderFilters.FirstOrDefault(option =>
+            option.Kind == previousKind && option.FolderId == previousFolderId) ?? FolderFilters[0];
+        if (!ReferenceEquals(_selectedFolderFilter, replacement))
+        {
+            _selectedFolderFilter = replacement;
+            OnPropertyChanged(nameof(SelectedFolderFilter));
+            RenameFolderCommand.NotifyCanExecuteChanged();
+            DeleteFolderCommand.NotifyCanExecuteChanged();
+        }
     }
 
     private void ApplyFilter()
     {
         var selectedId = SelectedEntry?.Id;
+        IEnumerable<VaultEntry> filtered = _allEntries;
+        filtered = SelectedFolderFilter?.Kind switch
+        {
+            FolderFilterKind.Unfiled => filtered.Where(entry => entry.FolderId is null),
+            FolderFilterKind.Folder => filtered.Where(entry => entry.FolderId == SelectedFolderFilter.FolderId),
+            _ => filtered
+        };
+
         var query = SearchText.Trim();
-        var filtered = string.IsNullOrEmpty(query)
-            ? _allEntries
-            : _allEntries.Where(entry =>
+        if (!string.IsNullOrEmpty(query))
+        {
+            filtered = filtered.Where(entry =>
                 entry.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
                 entry.Username.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
-                entry.Website.Contains(query, StringComparison.CurrentCultureIgnoreCase)).ToList();
+                entry.Website.Contains(query, StringComparison.CurrentCultureIgnoreCase));
+        }
 
         Entries.Clear();
         foreach (var entry in filtered.OrderByDescending(item => item.IsFavorite).ThenBy(item => item.Name))
@@ -145,7 +232,10 @@ public sealed class VaultViewModel : ObservableObject
 
     private async Task AddAsync()
     {
-        var entry = _dialogs.EditEntry(null, _generator);
+        var defaultFolderId = SelectedFolderFilter?.Kind == FolderFilterKind.Folder
+            ? SelectedFolderFilter.FolderId
+            : null;
+        var entry = _dialogs.EditEntry(null, _generator, _allFolders, defaultFolderId);
         if (entry is null)
         {
             return;
@@ -159,7 +249,7 @@ public sealed class VaultViewModel : ObservableObject
         {
             return;
         }
-        var entry = _dialogs.EditEntry(SelectedEntry.Copy(), _generator);
+        var entry = _dialogs.EditEntry(SelectedEntry.Copy(), _generator, _allFolders);
         if (entry is null)
         {
             return;
@@ -186,6 +276,96 @@ public sealed class VaultViewModel : ObservableObject
             IsBusy = false;
         }
     }
+
+    private async Task AddFolderAsync()
+    {
+        var folder = _dialogs.EditFolder(null);
+        if (folder is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            await _vault.SaveFolderAsync(folder);
+            await RefreshAsync();
+            SelectedFolderFilter = FolderFilters.First(option => option.FolderId == folder.Id);
+            StatusMessage = $"Pasta ‘{folder.Name}’ criada.";
+        }
+        catch (Exception exception)
+        {
+            _dialogs.ShowMessage(exception.Message, "Não foi possível criar a pasta", true);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task RenameFolderAsync()
+    {
+        var current = GetSelectedFolder();
+        if (current is null)
+        {
+            return;
+        }
+        var updated = _dialogs.EditFolder(current.Copy());
+        if (updated is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            await _vault.SaveFolderAsync(updated);
+            await RefreshAsync();
+            StatusMessage = $"Pasta renomeada para ‘{updated.Name}’.";
+        }
+        catch (Exception exception)
+        {
+            _dialogs.ShowMessage(exception.Message, "Não foi possível renomear a pasta", true);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task DeleteFolderAsync()
+    {
+        var folder = GetSelectedFolder();
+        if (folder is null || !_dialogs.Confirm(
+                $"Excluir a pasta ‘{folder.Name}’? As credenciais dela serão movidas para ‘Sem pasta’.",
+                "Excluir pasta"))
+        {
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            await _vault.DeleteFolderAsync(folder.Id);
+            await RefreshAsync();
+            StatusMessage = $"Pasta ‘{folder.Name}’ excluída. As credenciais foram preservadas.";
+        }
+        catch (Exception exception)
+        {
+            _dialogs.ShowMessage(exception.Message, "Não foi possível excluir a pasta", true);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private VaultFolder? GetSelectedFolder() => SelectedFolderFilter?.Kind == FolderFilterKind.Folder
+        ? _allFolders.FirstOrDefault(folder => folder.Id == SelectedFolderFilter.FolderId)
+        : null;
+
+    private bool CanManageSelectedFolder() =>
+        !IsBusy && SelectedFolderFilter?.Kind == FolderFilterKind.Folder;
 
     private async Task DeleteAsync()
     {
@@ -277,7 +457,21 @@ public sealed class VaultViewModel : ObservableObject
     {
         _vault.Lock();
         _allEntries.Clear();
+        _allFolders.Clear();
         Entries.Clear();
+        FolderFilters.Clear();
         await _onLocked();
     }
+}
+
+public enum FolderFilterKind
+{
+    All,
+    Unfiled,
+    Folder
+}
+
+public sealed record FolderFilterOption(FolderFilterKind Kind, Guid? FolderId, string Name, int Count)
+{
+    public string DisplayName => $"{Name} ({Count})";
 }

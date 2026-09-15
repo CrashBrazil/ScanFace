@@ -8,6 +8,7 @@ public sealed class VaultEntry
     public string Password { get; set; } = string.Empty;
     public string Website { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
+    public Guid? FolderId { get; set; }
     public bool IsFavorite { get; set; }
     public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
@@ -20,6 +21,7 @@ public sealed class VaultEntry
         Password = Password,
         Website = Website,
         Notes = Notes,
+        FolderId = FolderId,
         IsFavorite = IsFavorite,
         CreatedAtUtc = CreatedAtUtc,
         UpdatedAtUtc = UpdatedAtUtc
