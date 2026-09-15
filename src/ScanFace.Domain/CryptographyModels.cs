@@ -14,6 +14,13 @@ public sealed record StoredEncryptedEntry(
     byte[] Tag,
     DateTimeOffset UpdatedAtUtc);
 
+public sealed record StoredEncryptedFolder(
+    Guid Id,
+    byte[] Nonce,
+    byte[] Ciphertext,
+    byte[] Tag,
+    DateTimeOffset UpdatedAtUtc);
+
 public sealed class VaultMetadata
 {
     public const int CurrentSchemaVersion = 1;

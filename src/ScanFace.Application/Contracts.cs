@@ -31,6 +31,9 @@ public interface IVaultRepository
     Task<IReadOnlyList<StoredEncryptedEntry>> GetEntriesAsync(CancellationToken cancellationToken = default);
     Task UpsertEntryAsync(StoredEncryptedEntry entry, CancellationToken cancellationToken = default);
     Task DeleteEntryAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StoredEncryptedFolder>> GetFoldersAsync(CancellationToken cancellationToken = default);
+    Task UpsertFolderAsync(StoredEncryptedFolder folder, CancellationToken cancellationToken = default);
+    Task DeleteFolderAsync(Guid id, CancellationToken cancellationToken = default);
     Task<PortableVaultSnapshot> ExportSnapshotAsync(CancellationToken cancellationToken = default);
     Task ReplaceFromSnapshotAsync(PortableVaultSnapshot snapshot, CancellationToken cancellationToken = default);
 }

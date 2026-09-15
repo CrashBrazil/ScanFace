@@ -1,6 +1,7 @@
 using ScanFace.Application;
 using ScanFace.App.Presentation;
 using ScanFace.Domain;
+using System.Collections.ObjectModel;
 
 namespace ScanFace.App.ViewModels;
 
@@ -26,8 +27,13 @@ public sealed class EntryEditorViewModel : ObservableObject
     private int _minimumNumbers = 1;
     private int _minimumSymbols = 1;
     private bool _avoidAmbiguousCharacters = true;
+    private FolderOption? _selectedFolder;
 
-    public EntryEditorViewModel(VaultEntry? entry, PasswordGeneratorService generator)
+    public EntryEditorViewModel(
+        VaultEntry? entry,
+        PasswordGeneratorService generator,
+        IReadOnlyList<VaultFolder> folders,
+        Guid? defaultFolderId = null)
     {
         _generator = generator;
         _id = entry?.Id ?? Guid.NewGuid();
@@ -39,6 +45,13 @@ public sealed class EntryEditorViewModel : ObservableObject
         Notes = entry?.Notes ?? string.Empty;
         IsFavorite = entry?.IsFavorite ?? false;
         Title = entry is null ? "Nova credencial" : "Editar credencial";
+        FolderOptions.Add(new FolderOption(null, "Sem pasta"));
+        foreach (var folder in folders.OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase))
+        {
+            FolderOptions.Add(new FolderOption(folder.Id, folder.Name));
+        }
+        var selectedFolderId = entry?.FolderId ?? defaultFolderId;
+        SelectedFolder = FolderOptions.FirstOrDefault(item => item.Id == selectedFolderId) ?? FolderOptions[0];
 
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(() => RequestClose?.Invoke(false));
@@ -66,6 +79,8 @@ public sealed class EntryEditorViewModel : ObservableObject
     public int MinimumSymbols { get => _minimumSymbols; set => SetProperty(ref _minimumSymbols, value); }
     public bool AvoidAmbiguousCharacters { get => _avoidAmbiguousCharacters; set => SetProperty(ref _avoidAmbiguousCharacters, value); }
     public IReadOnlyList<int> MinimumOptions { get; } = Enumerable.Range(0, 11).ToArray();
+    public ObservableCollection<FolderOption> FolderOptions { get; } = [];
+    public FolderOption? SelectedFolder { get => _selectedFolder; set => SetProperty(ref _selectedFolder, value); }
     public RelayCommand SaveCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand GeneratePasswordCommand { get; }
@@ -115,9 +130,12 @@ public sealed class EntryEditorViewModel : ObservableObject
             Website = Website.Trim(),
             Notes = Notes.Trim(),
             IsFavorite = IsFavorite,
+            FolderId = SelectedFolder?.Id,
             CreatedAtUtc = _createdAtUtc,
             UpdatedAtUtc = DateTimeOffset.UtcNow
         };
         RequestClose?.Invoke(true);
     }
 }
+
+public sealed record FolderOption(Guid? Id, string Name);

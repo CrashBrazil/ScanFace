@@ -238,6 +238,12 @@ public sealed class VaultApplicationService
             entry.Id = Guid.NewGuid();
         }
 
+        if (entry.FolderId is Guid folderId &&
+            !(await GetFoldersAsync(cancellationToken)).Any(folder => folder.Id == folderId))
+        {
+            throw new ArgumentException("A pasta selecionada não existe mais.", nameof(entry));
+        }
+
         var now = DateTimeOffset.UtcNow;
         if (entry.CreatedAtUtc == default)
         {
@@ -263,6 +269,88 @@ public sealed class VaultApplicationService
     {
         _session.RequireKey();
         return _repository.DeleteEntryAsync(id, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<VaultFolder>> GetFoldersAsync(CancellationToken cancellationToken = default)
+    {
+        var key = _session.RequireKey();
+        var stored = await _repository.GetFoldersAsync(cancellationToken);
+        var result = new List<VaultFolder>(stored.Count);
+
+        foreach (var item in stored)
+        {
+            var payload = new EncryptedPayload(item.Nonce, item.Ciphertext, item.Tag);
+            var plaintext = _cryptography.Decrypt(payload, key, FolderAad(item.Id));
+            try
+            {
+                var folder = JsonSerializer.Deserialize<VaultFolder>(plaintext, JsonOptions)
+                    ?? throw new InvalidDataException($"A pasta {item.Id} está corrompida.");
+                result.Add(folder);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(plaintext);
+            }
+        }
+
+        return result.OrderBy(folder => folder.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
+    }
+
+    public async Task SaveFolderAsync(VaultFolder folder, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        var normalizedName = folder.Name.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedName) || normalizedName.Length > 80)
+        {
+            throw new ArgumentException("O nome da pasta deve ter entre 1 e 80 caracteres.", nameof(folder));
+        }
+
+        var existingFolders = await GetFoldersAsync(cancellationToken);
+        if (existingFolders.Any(item =>
+                item.Id != folder.Id &&
+                string.Equals(item.Name, normalizedName, StringComparison.CurrentCultureIgnoreCase)))
+        {
+            throw new ArgumentException("Já existe uma pasta com esse nome.", nameof(folder));
+        }
+
+        if (folder.Id == Guid.Empty)
+        {
+            folder.Id = Guid.NewGuid();
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        if (folder.CreatedAtUtc == default)
+        {
+            folder.CreatedAtUtc = now;
+        }
+        folder.Name = normalizedName;
+        folder.UpdatedAtUtc = now;
+
+        var plaintext = JsonSerializer.SerializeToUtf8Bytes(folder, JsonOptions);
+        try
+        {
+            var encrypted = _cryptography.Encrypt(plaintext, _session.RequireKey(), FolderAad(folder.Id));
+            await _repository.UpsertFolderAsync(
+                new StoredEncryptedFolder(folder.Id, encrypted.Nonce, encrypted.Ciphertext, encrypted.Tag, now),
+                cancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plaintext);
+        }
+    }
+
+    public async Task DeleteFolderAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        _session.RequireKey();
+        var entries = await GetEntriesAsync(cancellationToken);
+        foreach (var entry in entries.Where(entry => entry.FolderId == id))
+        {
+            entry.FolderId = null;
+            await SaveEntryAsync(entry, cancellationToken);
+        }
+
+        await _repository.DeleteFolderAsync(id, cancellationToken);
     }
 
     public async Task ExportBackupAsync(string path, CancellationToken cancellationToken = default)
@@ -316,6 +404,7 @@ public sealed class VaultApplicationService
 
     private static byte[] MasterEnvelopeAad() => Encoding.UTF8.GetBytes("ScanFace:vault-key:v1");
     private static byte[] EntryAad(Guid id) => Encoding.UTF8.GetBytes($"ScanFace:entry:{id:D}:v1");
+    private static byte[] FolderAad(Guid id) => Encoding.UTF8.GetBytes($"ScanFace:folder:{id:D}:v1");
 
     private static void ValidateMasterPassword(string password)
     {

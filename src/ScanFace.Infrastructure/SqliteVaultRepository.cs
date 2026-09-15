@@ -26,7 +26,6 @@ public sealed class SqliteVaultRepository : IVaultRepository
         }
 
         await using var connection = await OpenAsync(cancellationToken);
-        await CreateSchemaAsync(connection, cancellationToken);
         await WriteMetadataAsync(connection, metadata, null, cancellationToken);
     }
 
@@ -108,6 +107,63 @@ public sealed class SqliteVaultRepository : IVaultRepository
         await transaction.CommitAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<StoredEncryptedFolder>> GetFoldersAsync(CancellationToken cancellationToken = default)
+    {
+        var folders = new List<StoredEncryptedFolder>();
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT id, nonce, ciphertext, tag, updated_at_utc FROM folders ORDER BY updated_at_utc DESC";
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            folders.Add(new StoredEncryptedFolder(
+                Guid.Parse(reader.GetString(0)),
+                (byte[])reader[1],
+                (byte[])reader[2],
+                (byte[])reader[3],
+                DateTimeOffset.Parse(reader.GetString(4), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)));
+        }
+        return folders;
+    }
+
+    public async Task UpsertFolderAsync(StoredEncryptedFolder folder, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.Transaction = (SqliteTransaction)transaction;
+        command.CommandText = """
+            INSERT INTO folders(id, nonce, ciphertext, tag, updated_at_utc)
+            VALUES($id, $nonce, $ciphertext, $tag, $updated)
+            ON CONFLICT(id) DO UPDATE SET
+                nonce = excluded.nonce,
+                ciphertext = excluded.ciphertext,
+                tag = excluded.tag,
+                updated_at_utc = excluded.updated_at_utc;
+            """;
+        command.Parameters.AddWithValue("$id", folder.Id.ToString("D"));
+        command.Parameters.AddWithValue("$nonce", folder.Nonce);
+        command.Parameters.AddWithValue("$ciphertext", folder.Ciphertext);
+        command.Parameters.AddWithValue("$tag", folder.Tag);
+        command.Parameters.AddWithValue("$updated", folder.UpdatedAtUtc.ToString("O"));
+        await command.ExecuteNonQueryAsync(cancellationToken);
+        await TouchMetadataAsync(connection, (SqliteTransaction)transaction, folder.UpdatedAtUtc, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    public async Task DeleteFolderAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.Transaction = (SqliteTransaction)transaction;
+        command.CommandText = "DELETE FROM folders WHERE id = $id";
+        command.Parameters.AddWithValue("$id", id.ToString("D"));
+        await command.ExecuteNonQueryAsync(cancellationToken);
+        await TouchMetadataAsync(connection, (SqliteTransaction)transaction, DateTimeOffset.UtcNow, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     public async Task<PortableVaultSnapshot> ExportSnapshotAsync(CancellationToken cancellationToken = default)
     {
         var metadata = await GetMetadataAsync(cancellationToken)
@@ -115,7 +171,8 @@ public sealed class SqliteVaultRepository : IVaultRepository
         return new PortableVaultSnapshot
         {
             Metadata = PortableMetadata(metadata),
-            Entries = await GetEntriesAsync(cancellationToken)
+            Entries = await GetEntriesAsync(cancellationToken),
+            Folders = await GetFoldersAsync(cancellationToken)
         };
     }
 
@@ -129,13 +186,19 @@ public sealed class SqliteVaultRepository : IVaultRepository
 
         _paths.EnsureCreated();
         await using var connection = await OpenAsync(cancellationToken);
-        await CreateSchemaAsync(connection, cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         await using (var clear = connection.CreateCommand())
         {
             clear.Transaction = (SqliteTransaction)transaction;
             clear.CommandText = "DELETE FROM entries";
+            await clear.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await using (var clear = connection.CreateCommand())
+        {
+            clear.Transaction = (SqliteTransaction)transaction;
+            clear.CommandText = "DELETE FROM folders";
             await clear.ExecuteNonQueryAsync(cancellationToken);
         }
 
@@ -149,6 +212,19 @@ public sealed class SqliteVaultRepository : IVaultRepository
             insert.Parameters.AddWithValue("$ciphertext", entry.Ciphertext);
             insert.Parameters.AddWithValue("$tag", entry.Tag);
             insert.Parameters.AddWithValue("$updated", entry.UpdatedAtUtc.ToString("O"));
+            await insert.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        foreach (var folder in snapshot.Folders)
+        {
+            await using var insert = connection.CreateCommand();
+            insert.Transaction = (SqliteTransaction)transaction;
+            insert.CommandText = "INSERT INTO folders(id, nonce, ciphertext, tag, updated_at_utc) VALUES($id, $nonce, $ciphertext, $tag, $updated)";
+            insert.Parameters.AddWithValue("$id", folder.Id.ToString("D"));
+            insert.Parameters.AddWithValue("$nonce", folder.Nonce);
+            insert.Parameters.AddWithValue("$ciphertext", folder.Ciphertext);
+            insert.Parameters.AddWithValue("$tag", folder.Tag);
+            insert.Parameters.AddWithValue("$updated", folder.UpdatedAtUtc.ToString("O"));
             await insert.ExecuteNonQueryAsync(cancellationToken);
         }
 
@@ -171,6 +247,7 @@ public sealed class SqliteVaultRepository : IVaultRepository
         await using var pragma = connection.CreateCommand();
         pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON;";
         await pragma.ExecuteNonQueryAsync(cancellationToken);
+        await CreateSchemaAsync(connection, cancellationToken);
         return connection;
     }
 
@@ -183,6 +260,13 @@ public sealed class SqliteVaultRepository : IVaultRepository
                 value TEXT NOT NULL
             );
             CREATE TABLE IF NOT EXISTS entries (
+                id TEXT PRIMARY KEY,
+                nonce BLOB NOT NULL,
+                ciphertext BLOB NOT NULL,
+                tag BLOB NOT NULL,
+                updated_at_utc TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS folders (
                 id TEXT PRIMARY KEY,
                 nonce BLOB NOT NULL,
                 ciphertext BLOB NOT NULL,

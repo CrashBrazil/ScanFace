@@ -5,7 +5,12 @@ namespace ScanFace.App.Services;
 
 public interface IAppDialogService
 {
-    VaultEntry? EditEntry(VaultEntry? entry, PasswordGeneratorService generator);
+    VaultEntry? EditEntry(
+        VaultEntry? entry,
+        PasswordGeneratorService generator,
+        IReadOnlyList<VaultFolder> folders,
+        Guid? defaultFolderId = null);
+    VaultFolder? EditFolder(VaultFolder? folder);
     (string Password, bool EnableWindowsHello)? RequestBackupPassword();
     string? ChooseBackupToOpen();
     string? ChooseBackupToSave();

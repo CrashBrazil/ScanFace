@@ -5,6 +5,7 @@
 TestResults/
 artifacts/
 publish/
+tmp/
 *.user
 *.suo
 *.db

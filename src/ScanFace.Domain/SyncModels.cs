@@ -4,6 +4,7 @@ public sealed class PortableVaultSnapshot
 {
     public required VaultMetadata Metadata { get; init; }
     public required IReadOnlyList<StoredEncryptedEntry> Entries { get; init; }
+    public IReadOnlyList<StoredEncryptedFolder> Folders { get; init; } = [];
     public DateTimeOffset ExportedAtUtc { get; init; } = DateTimeOffset.UtcNow;
 }
 
