@@ -1,4 +1,7 @@
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using ScanFace.Application;
 using ScanFace.App.ViewModels;
@@ -9,7 +12,11 @@ namespace ScanFace.App.Services;
 
 public sealed class DialogService : IAppDialogService
 {
+    private readonly List<Window> _vaultDialogs = [];
+    private DispatcherTimer? _clipboardTimer;
+
     public Window? Owner { get; set; }
+    internal Window? ActiveOwner => _vaultDialogs.LastOrDefault() ?? Owner;
 
     public VaultEntry? EditEntry(
         VaultEntry? entry,
@@ -24,7 +31,7 @@ public sealed class DialogService : IAppDialogService
             DataContext = viewModel
         };
         viewModel.RequestClose += result => window.DialogResult = result;
-        return window.ShowDialog() == true ? viewModel.Result : null;
+        return ShowVaultDialog(window) == true ? viewModel.Result : null;
     }
 
     public VaultFolder? EditFolder(VaultFolder? folder)
@@ -36,7 +43,7 @@ public sealed class DialogService : IAppDialogService
             DataContext = viewModel
         };
         viewModel.RequestClose += result => window.DialogResult = result;
-        return window.ShowDialog() == true ? viewModel.Result : null;
+        return ShowVaultDialog(window) == true ? viewModel.Result : null;
     }
 
     public (string Password, bool EnableWindowsHello)? RequestBackupPassword()
@@ -76,34 +83,59 @@ public sealed class DialogService : IAppDialogService
     }
 
     public bool Confirm(string message, string title) =>
-        MessageBox.Show(Owner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
+        MessageBox.Show(ActiveOwner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
 
     public void ShowMessage(string message, string title, bool isError = false) =>
-        MessageBox.Show(Owner, message, title, MessageBoxButton.OK, isError ? MessageBoxImage.Error : MessageBoxImage.Information);
+        MessageBox.Show(ActiveOwner, message, title, MessageBoxButton.OK, isError ? MessageBoxImage.Error : MessageBoxImage.Information);
 
-    public async Task CopySensitiveAsync(string value)
+    public Task CopySensitiveAsync(string value)
     {
         if (string.IsNullOrEmpty(value))
         {
-            return;
+            return Task.CompletedTask;
         }
 
         Clipboard.SetText(value);
-        await Task.Delay(TimeSpan.FromSeconds(30));
-        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+        var sequence = GetClipboardSequenceNumber();
+        _clipboardTimer?.Stop();
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _clipboardTimer = timer;
+        timer.Tick += (_, _) =>
         {
+            timer.Stop();
+            _clipboardTimer = null;
             try
             {
-                if (Clipboard.ContainsText() && Clipboard.GetText() == value)
+                if (sequence != 0 && GetClipboardSequenceNumber() == sequence)
                 {
                     Clipboard.Clear();
                 }
             }
-            catch
+            catch (ExternalException)
             {
                 // Another process can temporarily lock the Windows clipboard.
             }
+        };
+        timer.Start();
+        return Task.CompletedTask;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern uint GetClipboardSequenceNumber();
+
+    public void ShowGenerator(PasswordGeneratorService generator) =>
+        ShowVaultDialog(new GeneratorWindow
+        {
+            Owner = Owner,
+            DataContext = new GeneratorViewModel(generator, CopySensitiveAsync)
         });
+
+    public void CloseVaultDialog()
+    {
+        foreach (var dialog in _vaultDialogs.ToArray().Reverse())
+        {
+            dialog.Close();
+        }
     }
 
     public async Task ShowSettingsAsync(VaultApplicationService vault, SyncCoordinator sync)
@@ -116,6 +148,32 @@ public sealed class DialogService : IAppDialogService
         };
         viewModel.RequestClose += () => window.Close();
         await viewModel.InitializeAsync();
-        window.ShowDialog();
+        if (vault.IsUnlocked)
+        {
+            ShowVaultDialog(window);
+        }
     }
+
+    internal bool? ShowVaultDialog(Window window)
+    {
+        window.Owner = ActiveOwner;
+        _vaultDialogs.Add(window);
+        window.PreviewKeyDown += TouchVault;
+        window.PreviewMouseDown += TouchVault;
+        window.PreviewMouseWheel += TouchVault;
+        try
+        {
+            return window.ShowDialog();
+        }
+        finally
+        {
+            window.PreviewKeyDown -= TouchVault;
+            window.PreviewMouseDown -= TouchVault;
+            window.PreviewMouseWheel -= TouchVault;
+            _vaultDialogs.Remove(window);
+        }
+    }
+
+    private void TouchVault(object sender, InputEventArgs e) =>
+        (Owner?.DataContext as ShellViewModel)?.Touch();
 }

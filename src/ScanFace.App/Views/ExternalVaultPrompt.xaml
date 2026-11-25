@@ -1,0 +1,56 @@
+<Window x:Class="ScanFace.App.Views.ExternalVaultPrompt"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Style="{StaticResource AppWindow}" Width="520" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" Icon="/ScanFace;component/Assets/scanface.ico">
+    <StackPanel Margin="23">
+        <TextBlock x:Name="Heading" FontSize="25" FontWeight="SemiBold" />
+        <TextBlock x:Name="Description" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,13" />
+        <Border Style="{StaticResource Card}" Padding="15">
+            <StackPanel>
+                <StackPanel x:Name="NameFields" Visibility="Collapsed">
+                    <TextBlock Text="Nome do cofre" Style="{StaticResource LabelText}" Margin="0,0,0,5" />
+                    <TextBox x:Name="VaultName" MaxLength="64" AutomationProperties.Name="Nome do cofre" />
+                </StackPanel>
+                <StackPanel x:Name="Choices" Visibility="Collapsed">
+                    <TextBlock x:Name="ChoiceLabel" Style="{StaticResource LabelText}" Margin="0,0,0,5" />
+                    <ComboBox x:Name="Choice" DisplayMemberPath="Label" />
+                </StackPanel>
+                <StackPanel x:Name="LanFields" Visibility="Collapsed">
+                    <TextBlock Text="Quem pode abrir" Style="{StaticResource LabelText}" Margin="0,12,0,5" />
+                    <ComboBox x:Name="Mode" DisplayMemberPath="Label" SelectionChanged="ModeChanged"
+                              AutomationProperties.Name="Quem pode abrir" />
+                    <TextBlock Text="Disponibilidade" Style="{StaticResource LabelText}" Margin="0,12,0,5" />
+                    <ComboBox x:Name="Duration" DisplayMemberPath="Label" AutomationProperties.Name="Disponibilidade" />
+                    <CheckBox x:Name="VisibleOnLan" Content="Mostrar o cofre na lista da rede" IsChecked="True" Margin="0,13,0,0" />
+                    <TextBlock Text="Cofres ocultos exigem convite. O nome de um cofre visível é anunciado na rede."
+                               Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,0" FontSize="12" />
+                </StackPanel>
+                <StackPanel x:Name="CodeFields" Visibility="Collapsed">
+                    <TextBlock x:Name="CodeLabel" Style="{StaticResource LabelText}" Margin="0,0,0,5" />
+                    <TextBox x:Name="Code" MaxLength="2048" AutomationProperties.LabeledBy="{Binding ElementName=CodeLabel}" />
+                </StackPanel>
+                <StackPanel x:Name="LoginFields" Visibility="Collapsed">
+                    <TextBlock Text="Login" Style="{StaticResource LabelText}" Margin="0,10,0,5" />
+                    <TextBox x:Name="LoginInput" MaxLength="100" AutomationProperties.Name="Login" />
+                </StackPanel>
+                <StackPanel x:Name="PasswordFields" Visibility="Collapsed">
+                    <TextBlock x:Name="PasswordLabel" Text="Senha" Style="{StaticResource LabelText}" Margin="0,10,0,5" />
+                    <PasswordBox x:Name="PasswordInput" MaxLength="256" AutomationProperties.Name="Senha do cofre" />
+                </StackPanel>
+                <StackPanel x:Name="ConfirmPasswordFields" Visibility="Collapsed">
+                    <TextBlock Text="Confirmar senha" Style="{StaticResource LabelText}" Margin="0,10,0,5" />
+                    <PasswordBox x:Name="ConfirmPasswordInput" MaxLength="256" AutomationProperties.Name="Confirmar senha do cofre" />
+                </StackPanel>
+                <CheckBox x:Name="CopyName" Visibility="Collapsed" Content="Copiar também o nome do cofre" Margin="0,10,0,0" />
+                <CheckBox x:Name="CopyPublishing" Visibility="Collapsed" Content="Copiar visibilidade e duração entre cofres de rede"
+                          Margin="0,7,0,0" />
+                <TextBlock x:Name="Error" Style="{StaticResource FormStatus}" />
+            </StackPanel>
+        </Border>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,13,0,0">
+            <Button Content="Cancelar" IsCancel="True" Style="{StaticResource QuietButton}" Margin="0,0,6,0" />
+            <Button x:Name="Accept" IsDefault="True" Style="{StaticResource PrimaryButton}" MinWidth="105" Click="AcceptClick" />
+        </StackPanel>
+    </StackPanel>
+</Window>

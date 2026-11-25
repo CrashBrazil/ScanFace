@@ -202,10 +202,27 @@ public sealed class SqliteVaultRepository : IVaultRepository
             await clear.ExecuteNonQueryAsync(cancellationToken);
         }
 
-        foreach (var entry in snapshot.Entries)
+        await InsertItemsAsync(connection, (SqliteTransaction)transaction, snapshot.Folders, snapshot.Entries, cancellationToken);
+        await WriteMetadataAsync(connection, snapshot.Metadata, (SqliteTransaction)transaction, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    public async Task AppendItemsAsync(IReadOnlyList<StoredEncryptedFolder> folders, IReadOnlyList<StoredEncryptedEntry> entries, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await InsertItemsAsync(connection, (SqliteTransaction)transaction, folders, entries, cancellationToken);
+        await TouchMetadataAsync(connection, (SqliteTransaction)transaction, DateTimeOffset.UtcNow, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private static async Task InsertItemsAsync(SqliteConnection connection, SqliteTransaction transaction,
+        IReadOnlyList<StoredEncryptedFolder> folders, IReadOnlyList<StoredEncryptedEntry> entries, CancellationToken cancellationToken)
+    {
+        foreach (var entry in entries)
         {
             await using var insert = connection.CreateCommand();
-            insert.Transaction = (SqliteTransaction)transaction;
+            insert.Transaction = transaction;
             insert.CommandText = "INSERT INTO entries(id, nonce, ciphertext, tag, updated_at_utc) VALUES($id, $nonce, $ciphertext, $tag, $updated)";
             insert.Parameters.AddWithValue("$id", entry.Id.ToString("D"));
             insert.Parameters.AddWithValue("$nonce", entry.Nonce);
@@ -215,10 +232,10 @@ public sealed class SqliteVaultRepository : IVaultRepository
             await insert.ExecuteNonQueryAsync(cancellationToken);
         }
 
-        foreach (var folder in snapshot.Folders)
+        foreach (var folder in folders)
         {
             await using var insert = connection.CreateCommand();
-            insert.Transaction = (SqliteTransaction)transaction;
+            insert.Transaction = transaction;
             insert.CommandText = "INSERT INTO folders(id, nonce, ciphertext, tag, updated_at_utc) VALUES($id, $nonce, $ciphertext, $tag, $updated)";
             insert.Parameters.AddWithValue("$id", folder.Id.ToString("D"));
             insert.Parameters.AddWithValue("$nonce", folder.Nonce);
@@ -227,9 +244,6 @@ public sealed class SqliteVaultRepository : IVaultRepository
             insert.Parameters.AddWithValue("$updated", folder.UpdatedAtUtc.ToString("O"));
             await insert.ExecuteNonQueryAsync(cancellationToken);
         }
-
-        await WriteMetadataAsync(connection, snapshot.Metadata, (SqliteTransaction)transaction, cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
     }
 
     private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)

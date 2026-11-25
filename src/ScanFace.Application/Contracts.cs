@@ -18,8 +18,23 @@ public interface IDeviceKeyProtector
 
 public interface IWindowsHelloService
 {
-    Task<bool> IsAvailableAsync();
-    Task<bool> RequestVerificationAsync(string message);
+    Task<WindowsHelloStatus> CheckAvailabilityAsync();
+    Task<WindowsHelloStatus> RequestVerificationAsync(string message, CancellationToken cancellationToken = default);
+}
+
+public enum WindowsHelloStatus
+{
+    Available,
+    Verified,
+    NotEnabledForVault,
+    NotConfigured,
+    DeviceNotPresent,
+    DisabledByPolicy,
+    DeviceBusy,
+    RetriesExhausted,
+    Canceled,
+    KeyUnavailable,
+    Unavailable
 }
 
 public interface IVaultRepository
@@ -34,6 +49,7 @@ public interface IVaultRepository
     Task<IReadOnlyList<StoredEncryptedFolder>> GetFoldersAsync(CancellationToken cancellationToken = default);
     Task UpsertFolderAsync(StoredEncryptedFolder folder, CancellationToken cancellationToken = default);
     Task DeleteFolderAsync(Guid id, CancellationToken cancellationToken = default);
+    Task AppendItemsAsync(IReadOnlyList<StoredEncryptedFolder> folders, IReadOnlyList<StoredEncryptedEntry> entries, CancellationToken cancellationToken = default);
     Task<PortableVaultSnapshot> ExportSnapshotAsync(CancellationToken cancellationToken = default);
     Task ReplaceFromSnapshotAsync(PortableVaultSnapshot snapshot, CancellationToken cancellationToken = default);
 }

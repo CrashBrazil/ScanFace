@@ -1,0 +1,40 @@
+<Window x:Class="ScanFace.App.Views.GeneratorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Style="{StaticResource AppWindow}"
+        Title="Gerador de senhas" Width="540" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" Icon="/ScanFace;component/Assets/scanface.ico">
+    <Grid Margin="25">
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <StackPanel Margin="0,0,0,17">
+            <TextBlock Text="Gerador de senhas" FontSize="26" FontWeight="SemiBold" />
+            <TextBlock Text="Gere uma senha para copiar e usar onde precisar." Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" />
+        </StackPanel>
+        <Border Grid.Row="1" Style="{StaticResource Card}" Padding="16">
+            <StackPanel>
+                <TextBox Text="{Binding Password, Mode=OneWay}" AutomationProperties.Name="Senha gerada" IsReadOnly="True"
+                         FontFamily="Consolas" FontSize="17" TextWrapping="Wrap" Background="{StaticResource FieldBrush}" />
+                <DockPanel Margin="0,15,0,4">
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding Length}" FontWeight="SemiBold" />
+                    <TextBlock Text="Comprimento" FontWeight="SemiBold" />
+                </DockPanel>
+                <Slider Minimum="8" Maximum="128" TickFrequency="1" IsSnapToTickEnabled="True"
+                        Value="{Binding Length}" AutomationProperties.Name="Comprimento da senha" />
+                <WrapPanel Margin="0,14,0,0">
+                    <CheckBox Content="Incluir números" IsChecked="{Binding IncludeNumbers}" Margin="0,0,20,0" />
+                    <CheckBox Content="Incluir símbolos" IsChecked="{Binding IncludeSymbols}" />
+                </WrapPanel>
+                <CheckBox Content="Evitar caracteres ambíguos" IsChecked="{Binding AvoidAmbiguous}" Margin="0,10,0,0" />
+            </StackPanel>
+        </Border>
+        <StackPanel Grid.Row="2" Margin="0,15,0,0">
+            <TextBlock Text="{Binding Status}" Style="{StaticResource FormStatus}" Foreground="{StaticResource AccentBrush}"
+                       Margin="0,0,0,10" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Fechar" IsCancel="True" Style="{StaticResource QuietButton}" Margin="0,0,6,0" />
+                <Button Content="Gerar outra" Command="{Binding GenerateCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" />
+                <Button Content="Copiar senha" Command="{Binding CopyCommand}" Style="{StaticResource PrimaryButton}" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

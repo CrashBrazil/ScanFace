@@ -56,8 +56,7 @@ public sealed class VaultApplicationService
 
             if (enableWindowsHello)
             {
-                if (!await _windowsHello.IsAvailableAsync() ||
-                    !await _windowsHello.RequestVerificationAsync("Confirme sua identidade para ativar o Windows Hello no ScanFace."))
+                if (!await ConfirmWindowsHelloAsync("Confirme sua identidade para ativar o Windows Hello no ScanFace.", cancellationToken))
                 {
                     throw new InvalidOperationException("O Windows Hello não pôde confirmar sua identidade.");
                 }
@@ -94,6 +93,7 @@ public sealed class VaultApplicationService
             var vaultKey = _cryptography.Decrypt(metadata.MasterKeyEnvelope, wrappingKey, MasterEnvelopeAad());
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 _session.Unlock(vaultKey);
                 return true;
             }
@@ -112,17 +112,24 @@ public sealed class VaultApplicationService
         }
     }
 
-    public async Task<bool> UnlockWithWindowsHelloAsync(CancellationToken cancellationToken = default)
+    public async Task<WindowsHelloStatus> UnlockWithWindowsHelloAsync(CancellationToken cancellationToken = default)
     {
         var metadata = await RequireMetadataAsync(cancellationToken);
-        if (metadata.HelloKeyEnvelope is null || !await _windowsHello.IsAvailableAsync())
+        if (metadata.HelloKeyEnvelope is null)
         {
-            return false;
+            return WindowsHelloStatus.NotEnabledForVault;
         }
-
-        if (!await _windowsHello.RequestVerificationAsync("Desbloqueie seu cofre ScanFace."))
+        var availability = await _windowsHello.CheckAvailabilityAsync();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (availability != WindowsHelloStatus.Available)
         {
-            return false;
+            return availability;
+        }
+        var result = await _windowsHello.RequestVerificationAsync("Confirme sua identidade para desbloquear seu cofre ScanFace.", cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (result != WindowsHelloStatus.Verified)
+        {
+            return result;
         }
 
         try
@@ -130,8 +137,9 @@ public sealed class VaultApplicationService
             var vaultKey = _deviceKeyProtector.Unprotect(metadata.HelloKeyEnvelope);
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 _session.Unlock(vaultKey);
-                return true;
+                return WindowsHelloStatus.Verified;
             }
             finally
             {
@@ -140,20 +148,31 @@ public sealed class VaultApplicationService
         }
         catch (CryptographicException)
         {
-            return false;
+            return WindowsHelloStatus.KeyUnavailable;
         }
     }
 
     public async Task<bool> IsWindowsHelloEnabledAsync(CancellationToken cancellationToken = default) =>
         (await _repository.GetMetadataAsync(cancellationToken))?.HelloKeyEnvelope is not null;
 
-    public async Task<bool> IsWindowsHelloAvailableAsync() => await _windowsHello.IsAvailableAsync();
+    public async Task<WindowsHelloStatus> GetWindowsHelloStatusAsync() =>
+        await IsWindowsHelloEnabledAsync() ? await _windowsHello.CheckAvailabilityAsync() : WindowsHelloStatus.NotEnabledForVault;
+
+    private async Task<bool> ConfirmWindowsHelloAsync(string message, CancellationToken cancellationToken)
+    {
+        if (await _windowsHello.CheckAvailabilityAsync() != WindowsHelloStatus.Available)
+        {
+            return false;
+        }
+        var result = await _windowsHello.RequestVerificationAsync(message, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result == WindowsHelloStatus.Verified;
+    }
 
     public async Task EnableWindowsHelloAsync(CancellationToken cancellationToken = default)
     {
         var metadata = await RequireMetadataAsync(cancellationToken);
-        if (!await _windowsHello.IsAvailableAsync() ||
-            !await _windowsHello.RequestVerificationAsync("Confirme sua identidade para ativar o Windows Hello."))
+        if (!await ConfirmWindowsHelloAsync("Confirme sua identidade para ativar o Windows Hello.", cancellationToken))
         {
             throw new InvalidOperationException("O Windows Hello não pôde confirmar sua identidade.");
         }
@@ -359,6 +378,53 @@ public sealed class VaultApplicationService
         await _backupFiles.SaveAsync(path, await _repository.ExportSnapshotAsync(cancellationToken), cancellationToken);
     }
 
+    public EncryptedPayload EncryptExternalCatalog(byte[] data) =>
+        _cryptography.Encrypt(data, _session.RequireKey(), "ScanFace:external-catalog:v1"u8.ToArray());
+
+    public byte[] DecryptExternalCatalog(EncryptedPayload data) =>
+        _cryptography.Decrypt(data, _session.RequireKey(), "ScanFace:external-catalog:v1"u8.ToArray());
+
+    public async Task<ExternalVaultContent> ReadPersonalItemsAsync(CancellationToken cancellationToken = default) =>
+        new(Guid.Empty, "Cofre pessoal", await GetFoldersAsync(cancellationToken), await GetEntriesAsync(cancellationToken));
+
+    public async Task<int> CopyIntoPersonalVaultAsync(ExternalVaultContent source, CancellationToken cancellationToken = default)
+    {
+        var current = await ReadPersonalItemsAsync(cancellationToken);
+        var merged = VaultTransfer.Merge(source, current, copyName: false);
+        var addedFolders = new List<StoredEncryptedFolder>();
+        var addedEntries = new List<StoredEncryptedEntry>();
+
+        foreach (var folder in merged.Folders.Skip(current.Folders.Count))
+        {
+            var encrypted = Encrypt(folder, FolderAad(folder.Id));
+            addedFolders.Add(new(folder.Id, encrypted.Nonce, encrypted.Ciphertext, encrypted.Tag, folder.UpdatedAtUtc));
+        }
+        foreach (var entry in merged.Entries.Skip(current.Entries.Count))
+        {
+            var encrypted = Encrypt(entry, EntryAad(entry.Id));
+            addedEntries.Add(new(entry.Id, encrypted.Nonce, encrypted.Ciphertext, encrypted.Tag, entry.UpdatedAtUtc));
+        }
+        if (addedFolders.Count > 0 || addedEntries.Count > 0)
+        {
+            _session.RequireKey();
+            await _repository.AppendItemsAsync(addedFolders, addedEntries, cancellationToken);
+        }
+        return addedEntries.Count;
+    }
+
+    private EncryptedPayload Encrypt<T>(T value, byte[] associatedData)
+    {
+        var plaintext = JsonSerializer.SerializeToUtf8Bytes(value, JsonOptions);
+        try
+        {
+            return _cryptography.Encrypt(plaintext, _session.RequireKey(), associatedData);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plaintext);
+        }
+    }
+
     public async Task ImportBackupAsync(string path, string masterPassword, bool enableWindowsHello, CancellationToken cancellationToken = default)
     {
         var snapshot = await _backupFiles.LoadAsync(path, cancellationToken);
@@ -378,8 +444,7 @@ public sealed class VaultApplicationService
             snapshot.Metadata.HelloKeyEnvelope = null;
             if (enableWindowsHello)
             {
-                if (!await _windowsHello.IsAvailableAsync() ||
-                    !await _windowsHello.RequestVerificationAsync("Confirme sua identidade para proteger este cofre com o Windows Hello."))
+                if (!await ConfirmWindowsHelloAsync("Confirme sua identidade para proteger este cofre com o Windows Hello.", cancellationToken))
                 {
                     throw new InvalidOperationException("O Windows Hello não pôde confirmar sua identidade.");
                 }

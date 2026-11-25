@@ -2,6 +2,7 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using ScanFace.Application;
 using ScanFace.App.Services;
@@ -15,6 +16,7 @@ public partial class App : System.Windows.Application
     private VaultSession? _session;
     private HttpClient? _httpClient;
     private AppPaths? _paths;
+    private ExternalVaultWorkspace? _externalVaults;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -25,7 +27,8 @@ public partial class App : System.Windows.Application
         var repository = new SqliteVaultRepository(_paths);
         var cryptography = new AesGcmCryptographyService();
         var deviceProtector = new DpapiDeviceKeyProtector();
-        var hello = new WindowsHelloService();
+        var dialogs = new DialogService();
+        var hello = new WindowsHelloService(() => dialogs.ActiveOwner is { } owner ? new WindowInteropHelper(owner).Handle : 0);
         var backup = new JsonBackupFileService();
         _session = new VaultSession();
         _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
@@ -33,8 +36,9 @@ public partial class App : System.Windows.Application
         var vault = new VaultApplicationService(repository, cryptography, deviceProtector, hello, backup, _session);
         var settings = new ProtectedSyncSettingsStore(_paths, deviceProtector);
         var sync = new SyncCoordinator(repository, settings, new HttpRemoteSyncClient(_httpClient), _session);
-        var dialogs = new DialogService();
-        var shell = new ShellViewModel(vault, sync, new PasswordGeneratorService(), dialogs);
+        _externalVaults = new ExternalVaultWorkspace(vault, cryptography, new HostedVaultStore(_paths, vault),
+            new UsbVaultStore(cryptography), dialogs);
+        var shell = new ShellViewModel(vault, sync, new PasswordGeneratorService(), dialogs, _externalVaults);
 
         var window = new MainWindow { DataContext = shell };
         dialogs.Owner = window;
@@ -55,6 +59,7 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         DispatcherUnhandledException -= HandleDispatcherUnhandledException;
+        _externalVaults?.Dispose();
         _session?.Dispose();
         _httpClient?.Dispose();
         base.OnExit(e);

@@ -39,9 +39,44 @@ public sealed class VaultApplicationServiceTests : IDisposable
         Assert.DoesNotContain(entry.Password, backupText);
 
         service.Lock();
-        Assert.True(await service.UnlockWithWindowsHelloAsync());
+        Assert.Equal(WindowsHelloStatus.Verified, await service.UnlockWithWindowsHelloAsync());
         var restored = Assert.Single(await service.GetEntriesAsync());
         Assert.Equal(entry.Password, restored.Password);
+    }
+
+    [Theory]
+    [InlineData(WindowsHelloStatus.Canceled)]
+    [InlineData(WindowsHelloStatus.DeviceBusy)]
+    [InlineData(WindowsHelloStatus.RetriesExhausted)]
+    public async Task Vault_HelloDenialNeverOpensTheVault(WindowsHelloStatus denial)
+    {
+        var hello = new TestHelloService();
+        var vault = CreateService(new AppPaths(_temporaryDirectory), hello);
+        await vault.InitializeAsync(MasterPassword, enableWindowsHello: true);
+        vault.Lock();
+        hello.Verify = _ => Task.FromResult(denial);
+
+        Assert.Equal(denial, await vault.UnlockWithWindowsHelloAsync());
+        Assert.False(vault.IsUnlocked);
+        Assert.True(await vault.UnlockWithMasterPasswordAsync(MasterPassword));
+    }
+
+    [Fact]
+    public async Task Vault_IgnoresDelayedHelloApprovalAfterCancellation()
+    {
+        var hello = new TestHelloService();
+        var vault = CreateService(new AppPaths(_temporaryDirectory), hello);
+        await vault.InitializeAsync(MasterPassword, enableWindowsHello: true);
+        vault.Lock();
+        using var cancellation = new CancellationTokenSource();
+        hello.Verify = _ =>
+        {
+            cancellation.Cancel();
+            return Task.FromResult(WindowsHelloStatus.Verified);
+        };
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => vault.UnlockWithWindowsHelloAsync(cancellation.Token));
+        Assert.False(vault.IsUnlocked);
     }
 
     [Fact]
@@ -123,14 +158,14 @@ public sealed class VaultApplicationServiceTests : IDisposable
         Assert.Equal(folder.Name, Assert.Single(await service.GetFoldersAsync()).Name);
     }
 
-    private VaultApplicationService CreateService(AppPaths paths)
+    private VaultApplicationService CreateService(AppPaths paths, IWindowsHelloService? hello = null)
     {
         var repository = new SqliteVaultRepository(paths);
         return new VaultApplicationService(
             repository,
             new AesGcmCryptographyService(),
             new TestDeviceKeyProtector(),
-            new TestHelloService(),
+            hello ?? new TestHelloService(),
             new JsonBackupFileService(),
             _session);
     }
@@ -146,8 +181,12 @@ public sealed class VaultApplicationServiceTests : IDisposable
 
     private sealed class TestHelloService : IWindowsHelloService
     {
-        public Task<bool> IsAvailableAsync() => Task.FromResult(true);
-        public Task<bool> RequestVerificationAsync(string message) => Task.FromResult(true);
+        public Func<CancellationToken, Task<WindowsHelloStatus>> Verify { get; set; } =
+            _ => Task.FromResult(WindowsHelloStatus.Verified);
+
+        public Task<WindowsHelloStatus> CheckAvailabilityAsync() => Task.FromResult(WindowsHelloStatus.Available);
+        public Task<WindowsHelloStatus> RequestVerificationAsync(string message, CancellationToken cancellationToken = default) =>
+            Verify(cancellationToken);
     }
 
     private sealed class TestDeviceKeyProtector : IDeviceKeyProtector

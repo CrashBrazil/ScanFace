@@ -17,5 +17,7 @@ public interface IAppDialogService
     bool Confirm(string message, string title);
     void ShowMessage(string message, string title, bool isError = false);
     Task CopySensitiveAsync(string value);
+    void ShowGenerator(PasswordGeneratorService generator);
+    void CloseVaultDialog();
     Task ShowSettingsAsync(VaultApplicationService vault, SyncCoordinator sync);
 }

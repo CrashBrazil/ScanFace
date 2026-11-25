@@ -46,7 +46,7 @@ Escolha um dos arquivos da [versão mais recente](https://github.com/CrashBrazil
 
 As duas versões são autocontidas e não exigem instalar o .NET separadamente. O cofre fica em `%LOCALAPPDATA%\ScanFace`, separado do programa, e é preservado durante atualizações ou desinstalações. Consulte o [guia de instalação e portabilidade](docs/INSTALLATION.md).
 
-Requisitos: Windows 10 versão 2004 ou posterior, ou Windows 11, em arquitetura x64. Para entrar com o rosto, configure antes o reconhecimento facial no Windows Hello. O Windows pode apresentar impressão digital ou PIN como alternativa, conforme as políticas do computador.
+Requisitos: Windows 10 versão 2004 ou posterior, ou Windows 11, em arquitetura x64. Para entrar com o rosto, use uma câmera compatível e configure antes o reconhecimento facial no Windows Hello. No Windows 11, o ScanFace abre a janela de segurança do sistema vinculada à janela do aplicativo. O Windows pode apresentar impressão digital ou PIN conforme a configuração do computador.
 
 ## Recursos
 
@@ -57,10 +57,20 @@ Requisitos: Windows 10 versão 2004 ou posterior, ou Windows 11, em arquitetura 
 - Pastas cifradas para organizar e filtrar credenciais.
 - Gerador criptograficamente seguro com comprimento, grupos, mínimos e exclusão de caracteres ambíguos configuráveis.
 - Área de transferência limpa automaticamente após 30 segundos.
-- Bloqueio automático após 5 minutos de inatividade.
+- Bloqueio automático após 5 minutos de inatividade, ao bloquear ou desconectar a sessão do Windows, ou ao suspender o computador.
 - Troca da senha mestra após desbloqueio, inclusive quando a entrada foi feita pelo rosto.
 - Exportação e restauração de backup cifrado (`.scanface`).
 - Sincronização opcional com controle de conflito; a API armazena apenas o snapshot cifrado.
+
+## Cofres externos
+
+Abra **Cofres externos** na barra lateral e use o botão **+**.
+
+- **Rede**. Escolha rede sem senha, rede e senha ou login e senha. Com o PC conectado ao Wi-Fi, abra o cofre e clique em **Compartilhar**. O modo visível anuncia o nome do cofre na sub-rede. O modo oculto exige convite. Envie o convite ou confirme o código do anfitrião por um canal de confiança antes de informar a senha. O conteúdo trafega por TLS. O anfitrião pode encerrar a publicação a qualquer momento.
+- **USB**. Selecione uma unidade que informe um número de série e crie uma senha própria para ela. O ScanFace grava uma pasta oculta com dados cifrados e a reconhece ao conectar a unidade. O vínculo rejeita a cópia comum dos arquivos para outro pendrive, mas um identificador de armazenamento pode ser falsificado. Chaves físicas FIDO2 usam hardware próprio e podem ser configuradas pelos atalhos em **Chaves e passkeys**.
+- **Transferir**. Use **Importar de…** ou **Copiar para…** no cofre externo para copiar credenciais, pastas, notas e favoritos. Cofres de rede recebidos são somente leitura. Entre cofres de rede próprios, a cópia pode levar visibilidade e duração. A senha de acesso do destino permanece a que foi configurada pelo proprietário.
+
+A descoberta depende de comunicação local entre os dispositivos no Wi-Fi. Redes com isolamento de clientes ou regras de firewall podem bloquear a conexão. Uma pessoa autorizada a abrir um cofre de rede pode copiar seus itens. O backup normal do cofre pessoal cobre o cofre pessoal. Use a transferência para incluir nele itens de um cofre externo.
 
 ## Tecnologias utilizadas
 
